@@ -53,9 +53,9 @@ export function errorHandler(
     errorCode = 'CAST_ERROR';
   }
   // MongoDB duplicate key error
-  else if (err.name === 'MongoServerError' && (err as Record<string, unknown>).code === 11000) {
+  else if (err.name === 'MongoServerError' && (err as unknown as Record<string, unknown>).code === 11000) {
     statusCode = 409;
-    const keyValue = (err as Record<string, unknown>).keyValue as Record<string, unknown>;
+    const keyValue = (err as unknown as Record<string, unknown>).keyValue as Record<string, unknown>;
     const field = Object.keys(keyValue || {})[0] || 'field';
     message = `Duplicate value for ${field}. This ${field} already exists.`;
     errorCode = 'DUPLICATE_KEY';

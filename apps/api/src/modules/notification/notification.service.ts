@@ -42,7 +42,7 @@ export class NotificationService {
       .lean();
 
     return {
-      data: data as INotificationDocument[],
+      data: data as unknown as INotificationDocument[],
       pagination: buildPaginationMeta(query.page, query.limit, total),
     };
   }

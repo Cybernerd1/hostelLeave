@@ -18,8 +18,8 @@ export async function createAuditLog(params: {
   action: string;
   entity: string;
   entityId?: string;
-  previousData?: Record<string, unknown>;
-  newData?: Record<string, unknown>;
+  previousData?: object;
+  newData?: object;
   description?: string;
   ipAddress?: string;
   userAgent?: string;

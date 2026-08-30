@@ -4,11 +4,10 @@
  * Handles token generation, verification, and refresh token management.
  */
 
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { UserRole } from '@hostel/shared-types';
-
 import { config } from '../config';
 import { AppError } from './AppError';
 
@@ -29,9 +28,11 @@ export interface DecodedToken extends JWTPayload {
  * Generate an access token.
  */
 export function generateAccessToken(payload: JWTPayload): string {
-  return jwt.sign(payload, config.jwt.accessSecret, {
-    expiresIn: config.jwt.accessExpiry,
-  });
+  const options: SignOptions = {
+    expiresIn: config.jwt.accessExpiry as SignOptions['expiresIn'],
+  };
+
+  return jwt.sign(payload, config.jwt.accessSecret, options);
 }
 
 /**
