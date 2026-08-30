@@ -1,0 +1,30 @@
+.unauthorized-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  background-color: var(--surface-secondary);
+}
+
+.unauthorized-page__content {
+  text-align: center;
+  max-width: 420px;
+}
+
+.unauthorized-page__icon {
+  margin-bottom: var(--space-6);
+}
+
+.unauthorized-page__title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-3);
+}
+
+.unauthorized-page__message {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: var(--space-8);
+}

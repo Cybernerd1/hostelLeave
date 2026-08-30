@@ -1,0 +1,38 @@
+/* AdminPages.css - shared styles for admin management pages */
+
+.admin-page { max-width: 1100px; margin: 0 auto; }
+.admin-page__header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+.admin-page__title { font-size: 1.75rem; font-weight: 700; color: var(--color-neutral-900); margin: 0 0 0.25rem; }
+.admin-page__subtitle { color: var(--color-neutral-500); margin: 0; }
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+@media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr; } }
+
+.detail-section { margin-bottom: 1.5rem; }
+.detail-section__title {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--color-neutral-400);
+  margin: 0 0 0.75rem; padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-neutral-100);
+}
+
+.detail-rows { display: flex; flex-direction: column; gap: 0.625rem; }
+.detail-row { display: flex; justify-content: space-between; align-items: center; }
+.detail-label { font-size: 0.8125rem; color: var(--color-neutral-500); font-weight: 500; }
+.detail-value { font-size: 0.875rem; color: var(--color-neutral-800); font-weight: 600; }
+
+.avatar-lg {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--color-primary-600); color: white;
+  font-size: 1.5rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.card-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
+.card-header__info h2 { margin: 0; font-size: 1.125rem; font-weight: 700; }
+.card-header__info p { margin: 0.25rem 0 0; font-size: 0.875rem; color: var(--color-neutral-500); }

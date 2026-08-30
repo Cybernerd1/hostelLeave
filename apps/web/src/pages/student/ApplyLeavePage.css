@@ -1,0 +1,544 @@
+/* ─── Apply Leave Page ─────────────────────────────────────────── */
+/* Modelled after the AKGEC official Hostel Leave Application Form  */
+
+.apply-leave {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-8);
+  font-family: 'Inter', sans-serif;
+}
+
+/* ─── Official Form Header ─────────────────────────────────────── */
+.apply-leave__form-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  text-align: center;
+  padding: var(--space-6) var(--space-8);
+  background: var(--surface-primary);
+  border: 2px solid var(--color-primary-700);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  margin-bottom: 0;
+}
+
+.apply-leave__college-logo {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  color: var(--color-primary-700);
+}
+
+.apply-leave__college-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
+.apply-leave__college-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ─── Form ─────────────────────────────────────────────────────── */
+.apply-leave__form {
+  background: var(--surface-primary);
+  border: 2px solid var(--color-primary-700);
+  border-top: none;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  overflow: hidden;
+}
+
+/* ─── Section ──────────────────────────────────────────────────── */
+.apply-leave__section {
+  padding: var(--space-5) var(--space-8);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.apply-leave__section:last-child {
+  border-bottom: none;
+}
+
+.apply-leave__section-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary-700);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.apply-leave__section-title small {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  text-transform: none;
+  color: var(--text-tertiary);
+  letter-spacing: 0;
+}
+
+/* ─── Info Grid (auto-filled student info) ─────────────────────── */
+.apply-leave__info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.apply-leave__info-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.apply-leave__info-field {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 8px 12px;
+  border-right: 1px solid var(--border-primary);
+}
+
+.apply-leave__info-field:last-child {
+  border-right: none;
+}
+
+.apply-leave__info-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.apply-leave__info-value {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  border-bottom: 1px dashed var(--border-primary);
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 1px;
+}
+
+/* ─── Period Row ───────────────────────────────────────────────── */
+.apply-leave__period-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.apply-leave__days-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: 42px;
+  background: var(--color-primary-50);
+  border: 2px solid var(--color-primary-300);
+  border-radius: var(--radius-md);
+  font-size: 1.4rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-700);
+  margin-top: 24px;
+}
+
+/* ─── Leave Type Cards ─────────────────────────────────────────── */
+.apply-leave__leave-type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.apply-leave__type-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+  border: 1.5px solid var(--border-primary);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.apply-leave__type-card input {
+  display: none;
+}
+
+.apply-leave__type-card:hover {
+  border-color: var(--color-primary-400);
+  color: var(--color-primary-700);
+}
+
+.apply-leave__type-card--active {
+  background: var(--color-primary-600);
+  border-color: var(--color-primary-600);
+  color: white;
+  font-weight: var(--font-weight-semibold);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+
+/* ─── Form Fields ──────────────────────────────────────────────── */
+.apply-leave__field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.apply-leave__field-group--grow {
+  flex: 1;
+}
+
+.apply-leave__two-col {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.apply-leave__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+}
+
+.apply-leave__required {
+  color: var(--color-error-500);
+  margin-left: 2px;
+}
+
+.apply-leave__input {
+  height: 42px;
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--surface-primary);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  width: 100%;
+}
+
+.apply-leave__input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.apply-leave__input--error {
+  border-color: var(--color-error-400);
+}
+
+.apply-leave__input--error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.apply-leave__input--readonly {
+  background: var(--surface-secondary);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+.apply-leave__select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  min-width: 140px;
+}
+
+.apply-leave__textarea {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1.5px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--surface-primary);
+  resize: vertical;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+.apply-leave__textarea:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.apply-leave__char-count {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  text-align: right;
+  margin-top: 4px;
+}
+
+.apply-leave__error-msg {
+  font-size: var(--font-size-xs);
+  color: var(--color-error-500);
+  margin-top: 2px;
+}
+
+/* ─── File Upload ──────────────────────────────────────────────── */
+.apply-leave__upload-area {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 2px dashed var(--border-primary);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.apply-leave__upload-area:hover {
+  border-color: var(--color-primary-400);
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+}
+
+.apply-leave__upload-area svg {
+  width: 24px; height: 24px; flex-shrink: 0;
+}
+
+.apply-leave__upload-input {
+  display: none;
+}
+
+/* ─── Preview Summary ──────────────────────────────────────────── */
+.apply-leave__preview {
+  margin: 0;
+  padding: var(--space-5) var(--space-8);
+  background: linear-gradient(135deg, var(--color-primary-50), #f0f9ff);
+  border-top: 2px dashed var(--color-primary-200);
+  border-bottom: 2px dashed var(--color-primary-200);
+}
+
+.apply-leave__preview h3 {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-700);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 var(--space-3);
+}
+
+.apply-leave__preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+
+.apply-leave__preview-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.apply-leave__preview-grid span {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.apply-leave__preview-grid strong {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+/* ─── Form Footer ──────────────────────────────────────────────── */
+.apply-leave__form-footer {
+  padding: var(--space-6) var(--space-8);
+  background: var(--surface-secondary);
+  border-top: 1px solid var(--border-primary);
+}
+
+.apply-leave__disclaimer {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  line-height: 1.6;
+  margin: 0 0 var(--space-4);
+}
+
+.apply-leave__form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* ─── Buttons ──────────────────────────────────────────────────── */
+.apply-leave__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+}
+
+.apply-leave__btn svg {
+  width: 16px; height: 16px;
+}
+
+.apply-leave__btn--primary {
+  background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700));
+  color: white;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+
+.apply-leave__btn--primary:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45);
+}
+
+.apply-leave__btn--primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.apply-leave__btn--secondary {
+  background: var(--surface-primary);
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border-primary);
+}
+
+.apply-leave__btn--secondary:hover {
+  background: var(--surface-secondary);
+}
+
+.apply-leave__btn-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Alerts ───────────────────────────────────────────────────── */
+.apply-leave__alert {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-5) var(--space-8) 0;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.apply-leave__alert svg {
+  width: 18px; height: 18px; flex-shrink: 0;
+}
+
+.apply-leave__alert--error {
+  background: var(--color-error-50);
+  border: 1px solid var(--color-error-100);
+  color: var(--color-error-700);
+}
+
+/* ─── Loading ──────────────────────────────────────────────────── */
+.apply-leave__profile-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  padding: var(--space-2) 0;
+}
+
+.apply-leave__spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--border-primary);
+  border-top-color: var(--color-primary-600);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ─── Success Screen ───────────────────────────────────────────── */
+.apply-leave__success {
+  max-width: 480px;
+  margin: 80px auto;
+  text-align: center;
+  padding: var(--space-8);
+  background: var(--surface-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-2xl);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+}
+
+.apply-leave__success-icon {
+  width: 72px; height: 72px;
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-5);
+  color: #059669;
+}
+
+.apply-leave__success-icon svg {
+  width: 36px; height: 36px;
+}
+
+.apply-leave__success h2 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-3);
+}
+
+.apply-leave__success p {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-6);
+  line-height: 1.6;
+}
+
+.apply-leave__success-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* ─── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .apply-leave { padding: var(--space-4); }
+  .apply-leave__section { padding: var(--space-4); }
+  .apply-leave__form-footer { padding: var(--space-4); }
+  .apply-leave__form-header { padding: var(--space-4); flex-direction: column; }
+  .apply-leave__period-row { grid-template-columns: 1fr 1fr; }
+  .apply-leave__two-col { grid-template-columns: 1fr; }
+  .apply-leave__info-row { grid-template-columns: 1fr; }
+  .apply-leave__info-field { border-right: none; border-bottom: 1px solid var(--border-primary); }
+  .apply-leave__info-field:last-child { border-bottom: none; }
+  .apply-leave__preview-grid { grid-template-columns: repeat(2, 1fr); }
+  .apply-leave__form-actions { flex-direction: column-reverse; }
+  .apply-leave__btn { width: 100%; justify-content: center; }
+}

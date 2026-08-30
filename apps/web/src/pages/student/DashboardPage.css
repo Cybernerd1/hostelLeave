@@ -1,0 +1,110 @@
+.dashboard-page__header {
+  margin-bottom: var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.dashboard-page__greeting {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.dashboard-page__subtitle {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
+}
+
+.dashboard-page__stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+/* ─── Stat Card ─────────────────────────────────────────────────── */
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.stat-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-card__icon--primary {
+  background-color: var(--color-primary-50);
+  color: var(--color-primary-600);
+}
+
+.stat-card__icon--success {
+  background-color: var(--color-success-50);
+  color: var(--color-success-600);
+}
+
+.stat-card__icon--warning {
+  background-color: var(--color-warning-50);
+  color: var(--color-warning-600);
+}
+
+.stat-card__icon--error {
+  background-color: var(--color-error-50);
+  color: var(--color-error-600);
+}
+
+.stat-card__icon--info {
+  background-color: var(--color-info-50);
+  color: var(--color-info-600);
+}
+
+.stat-card__content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-card__value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.stat-card__label {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+  margin-top: var(--space-1);
+}
+
+/* ─── Empty State ───────────────────────────────────────────────── */
+.dashboard-page__empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-12) var(--space-6);
+  gap: var(--space-3);
+}
+
+.dashboard-page__empty-state h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+}
+
+.dashboard-page__empty-state p {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  max-width: 320px;
+}

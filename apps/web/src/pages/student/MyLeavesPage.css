@@ -1,0 +1,640 @@
+/* ─── My Leaves Page ─────────────────────────────────────────────── */
+
+.my-leaves {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+}
+
+/* ─── Header ─────────────────────────────────────────────────────── */
+.my-leaves__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-6);
+}
+
+.my-leaves__title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.my-leaves__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.my-leaves__apply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700));
+  color: white;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.my-leaves__apply-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45);
+}
+
+.my-leaves__apply-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ─── Stats Row ───────────────────────────────────────────────────── */
+.my-leaves__stats {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+}
+
+.my-leaves__stat {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid transparent;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.my-leaves__stat-value {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+}
+
+.my-leaves__stat-label {
+  opacity: 0.85;
+}
+
+.my-leaves__stat--primary  { background: var(--color-primary-50);  border-color: var(--color-primary-200);  color: var(--color-primary-700); }
+.my-leaves__stat--warning  { background: #fef3c7;                   border-color: #fde68a;                   color: #92400e; }
+.my-leaves__stat--success  { background: #d1fae5;                   border-color: #6ee7b7;                   color: #065f46; }
+.my-leaves__stat--error    { background: #fee2e2;                   border-color: #fca5a5;                   color: #7f1d1d; }
+.my-leaves__stat--info     { background: #dbeafe;                   border-color: #93c5fd;                   color: #1e3a5f; }
+
+/* ─── Filter Tabs ─────────────────────────────────────────────────── */
+.my-leaves__tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: var(--space-5);
+  border-bottom: 2px solid var(--border-primary);
+  padding-bottom: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.my-leaves__tabs::-webkit-scrollbar { display: none; }
+
+.my-leaves__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.my-leaves__tab:hover {
+  color: var(--color-primary-600);
+}
+
+.my-leaves__tab--active {
+  color: var(--color-primary-700);
+  font-weight: var(--font-weight-semibold);
+  border-bottom-color: var(--color-primary-600);
+}
+
+.my-leaves__tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-full);
+}
+
+.my-leaves__tab--active .my-leaves__tab-count {
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
+}
+
+/* ─── Loading Skeletons ───────────────────────────────────────────── */
+.my-leaves__loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.my-leaves__skeleton {
+  height: 160px;
+  background: linear-gradient(90deg, var(--surface-secondary) 25%, var(--surface-tertiary, #f3f4f6) 50%, var(--surface-secondary) 75%);
+  background-size: 200% 100%;
+  border-radius: var(--radius-xl);
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Error State ─────────────────────────────────────────────────── */
+.my-leaves__error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
+  color: var(--color-error-600);
+}
+
+.my-leaves__error-state svg {
+  width: 48px;
+  height: 48px;
+  opacity: 0.7;
+}
+
+.my-leaves__error-state p {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.my-leaves__retry-btn {
+  padding: 8px 20px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary-700);
+  background: var(--color-primary-50);
+  border: 1.5px solid var(--color-primary-200);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.my-leaves__retry-btn:hover {
+  background: var(--color-primary-100);
+}
+
+/* ─── Empty State ─────────────────────────────────────────────────── */
+.my-leaves__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-16) var(--space-4);
+  text-align: center;
+}
+
+.my-leaves__empty svg {
+  width: 56px;
+  height: 56px;
+  color: var(--text-tertiary);
+  opacity: 0.6;
+}
+
+.my-leaves__empty h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.my-leaves__empty p {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin: 0;
+  max-width: 320px;
+}
+
+/* ─── Leave Cards List ────────────────────────────────────────────── */
+.my-leaves__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ─── Leave Card ──────────────────────────────────────────────────── */
+.my-leaves__card {
+  background: var(--surface-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.my-leaves__card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+/* Card Header */
+.my-leaves__card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-primary);
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.my-leaves__card-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.my-leaves__leave-id {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  font-family: monospace;
+  color: var(--color-primary-700);
+  background: var(--color-primary-50);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-primary-200);
+}
+
+.my-leaves__status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-full);
+  border: 1px solid;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.my-leaves__applied-on {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+
+/* Card Body */
+.my-leaves__card-body {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.my-leaves__card-info {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.my-leaves__info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.my-leaves__info-item > svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.my-leaves__info-item > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.my-leaves__info-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: var(--font-weight-medium);
+}
+
+.my-leaves__info-value {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.my-leaves__info-value em {
+  font-style: normal;
+  color: var(--text-tertiary);
+  font-weight: var(--font-weight-normal);
+}
+
+/* ─── Approval Progress ───────────────────────────────────────────── */
+.my-leaves__progress {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: var(--space-3) var(--space-2);
+  background: var(--surface-secondary);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+}
+
+.my-leaves__progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 60px;
+  position: relative;
+}
+
+.my-leaves__progress-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--border-primary);
+  z-index: 0;
+}
+
+.my-leaves__progress-step--done:not(:last-child)::after {
+  background: #10b981;
+}
+
+.my-leaves__progress-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--border-primary);
+  background: var(--surface-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  position: relative;
+}
+
+.my-leaves__progress-dot svg {
+  width: 12px;
+  height: 12px;
+  color: white;
+}
+
+.my-leaves__progress-step--done .my-leaves__progress-dot {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.my-leaves__progress-step--current .my-leaves__progress-dot {
+  border-color: var(--color-primary-500);
+  background: var(--color-primary-50);
+}
+
+.my-leaves__progress-step > span {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.my-leaves__progress-step--done > span   { color: #059669; font-weight: var(--font-weight-semibold); }
+.my-leaves__progress-step--current > span { color: var(--color-primary-700); font-weight: var(--font-weight-semibold); }
+
+.my-leaves__progress-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary-500);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(0.8); }
+}
+
+/* ─── Cancel Form ─────────────────────────────────────────────────── */
+.my-leaves__cancel-form {
+  background: #fff5f5;
+  border: 1.5px solid #fca5a5;
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.my-leaves__cancel-form > p {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: #7f1d1d;
+  margin: 0;
+}
+
+.my-leaves__cancel-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  border: 1.5px solid #fca5a5;
+  border-radius: var(--radius-md);
+  background: white;
+  resize: vertical;
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+.my-leaves__cancel-input:focus {
+  outline: none;
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.my-leaves__cancel-error {
+  font-size: var(--font-size-xs);
+  color: #dc2626;
+}
+
+.my-leaves__cancel-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ─── Card Footer ─────────────────────────────────────────────────── */
+.my-leaves__card-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--surface-secondary);
+  border-top: 1px solid var(--border-primary);
+  flex-wrap: wrap;
+}
+
+/* ─── Buttons ─────────────────────────────────────────────────────── */
+.my-leaves__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-fast);
+}
+
+.my-leaves__btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.my-leaves__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.my-leaves__btn--primary {
+  background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700));
+  color: white;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+}
+
+.my-leaves__btn--primary:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.my-leaves__btn--outline {
+  background: transparent;
+  color: var(--color-primary-700);
+  border: 1.5px solid var(--color-primary-300);
+}
+
+.my-leaves__btn--outline:hover {
+  background: var(--color-primary-50);
+}
+
+.my-leaves__btn--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border-primary);
+}
+
+.my-leaves__btn--ghost:hover:not(:disabled) {
+  background: var(--surface-secondary);
+}
+
+.my-leaves__btn--danger {
+  background: #dc2626;
+  color: white;
+}
+
+.my-leaves__btn--danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.my-leaves__btn--ghost-danger {
+  background: transparent;
+  color: #dc2626;
+  border: 1.5px solid #fca5a5;
+}
+
+.my-leaves__btn--ghost-danger:hover {
+  background: #fff5f5;
+}
+
+.my-leaves__btn-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Pagination ──────────────────────────────────────────────────── */
+.my-leaves__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.my-leaves__page-btn {
+  padding: 8px 18px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary-700);
+  background: var(--surface-primary);
+  border: 1.5px solid var(--color-primary-200);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.my-leaves__page-btn:hover:not(:disabled) {
+  background: var(--color-primary-50);
+}
+
+.my-leaves__page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.my-leaves__page-info {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .my-leaves { padding: var(--space-4) var(--space-3); }
+  .my-leaves__header { flex-direction: column; align-items: stretch; }
+  .my-leaves__apply-btn { justify-content: center; }
+  .my-leaves__card-info { grid-template-columns: 1fr; gap: var(--space-3); }
+  .my-leaves__card-header { flex-direction: column; align-items: flex-start; }
+  .my-leaves__applied-on { margin-left: 0; }
+  .my-leaves__card-footer { flex-direction: column; align-items: stretch; }
+  .my-leaves__btn { justify-content: center; width: 100%; }
+  .my-leaves__stats { gap: var(--space-2); }
+}
