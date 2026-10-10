@@ -35,15 +35,15 @@ router.put(
   leaveController.cancelLeave,
 );
 
-// Approval routes (Parent, Warden, Chief Warden, HOD)
+// Approval routes (Parent, Warden, Chief Warden, HOD, Admin, VC)
 router.get(
   '/pending',
-  authorize(UserRole.PARENT, UserRole.WARDEN, UserRole.CHIEF_WARDEN, UserRole.HOD),
+  authorize(UserRole.PARENT, UserRole.WARDEN, UserRole.CHIEF_WARDEN, UserRole.HOD, UserRole.ADMIN, UserRole.VICE_CHANCELLOR),
   leaveController.getPendingLeaves,
 );
 router.put(
   '/:id/approve',
-  authorize(UserRole.PARENT, UserRole.WARDEN, UserRole.CHIEF_WARDEN, UserRole.HOD),
+  authorize(UserRole.PARENT, UserRole.WARDEN, UserRole.CHIEF_WARDEN, UserRole.HOD, UserRole.ADMIN, UserRole.VICE_CHANCELLOR),
   validateBody(approveLeaveSchema),
   leaveController.processApproval,
 );

@@ -79,6 +79,15 @@ export const config = {
     name: process.env.ADMIN_NAME || 'System Administrator',
   },
 
+  // Cloudinary Configuration
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    apiKey: process.env.CLOUDINARY_API_KEY || '',
+    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+    folder: process.env.CLOUDINARY_FOLDER || 'hostel_leave_documents',
+  },
+
+
   /** Check if running in production */
   get isProduction(): boolean {
     return this.env === 'production';

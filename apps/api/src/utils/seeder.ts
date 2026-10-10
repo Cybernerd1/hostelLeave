@@ -257,27 +257,41 @@ async function seed(): Promise<void> {
     });
     logger.info('─────────────────────────────────────────────────');
 
-    // ─── Patch: ensure demo student has parentId linked ──────────────────────
+    // ─── Patch: ensure demo warden, chief warden, HOD, and parent are linked ──────────
     {
       const parentUser = await User.findOne({ email: 'parent@demo.edu' });
       const studentUser = await User.findOne({ email: 'student@demo.edu' });
+      const wardenUser = await User.findOne({ email: 'warden@demo.edu' });
+      const chiefWardenUser = await User.findOne({ email: 'chiefwarden@demo.edu' });
+      const hodUser = await User.findOne({ email: 'hod@demo.edu' });
+
       if (parentUser && studentUser) {
         const parentDoc = await Parent.findOne({ userId: parentUser._id });
         if (parentDoc) {
-          const updated = await Student.findOneAndUpdate(
-            { userId: studentUser._id, parentId: { $exists: false } },
+          await Student.findOneAndUpdate(
+            { userId: studentUser._id },
             { $set: { parentId: parentDoc._id } },
           );
-          if (updated) {
-            logger.info('✅ Patched demo student: parentId linked to Rajesh Sharma');
-          } else {
-            // Already has a parentId — make sure it's the right one
-            await Student.findOneAndUpdate(
-              { userId: studentUser._id },
-              { $set: { parentId: parentDoc._id } },
-            );
-            logger.info('✅ Ensured demo student parentId is correct');
-          }
+          logger.info('✅ Ensured demo student parentId is linked');
+        }
+      }
+
+      if (wardenUser || chiefWardenUser) {
+        const hostel = await Hostel.findOne({ name: 'Hostel A (Boys)' });
+        if (hostel) {
+          const updateData: Record<string, mongoose.Types.ObjectId> = {};
+          if (wardenUser) updateData.wardenId = wardenUser._id as mongoose.Types.ObjectId;
+          if (chiefWardenUser) updateData.chiefWardenId = chiefWardenUser._id as mongoose.Types.ObjectId;
+          await Hostel.findByIdAndUpdate(hostel._id, { $set: updateData });
+          logger.info('✅ Linked demo Warden and Chief Warden to Hostel A (Boys)');
+        }
+      }
+
+      if (hodUser) {
+        const dept = await Department.findOne({ code: 'CSE' });
+        if (dept) {
+          await Department.findByIdAndUpdate(dept._id, { $set: { hodId: hodUser._id } });
+          logger.info('✅ Linked demo HOD to CSE Department');
         }
       }
     }

@@ -36,20 +36,21 @@ export function QRScanPage() {
     setLeaveInfo(null);
     setRecordMsg(null);
     try {
-      const res = await api.get<{ success: boolean; data: LeavePassInfo }>(`/leaves/${id.trim()}`);
-      const d = res.data.data;
+      const res = await api.get<{ success: boolean; data: Record<string, unknown> }>(`/leaves/${id.trim()}`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const d = res.data.data as any;
       setLeaveInfo({
         _id: d._id,
-        leaveId: (d as unknown as { leaveId: string }).leaveId,
+        leaveId: d.leaveId,
         status: d.status,
-        studentName: (d.studentId as unknown as { name: string })?.name ?? 'Unknown',
-        rollNumber: (d.studentId as unknown as { rollNumber: string })?.rollNumber ?? '—',
+        studentName: d.studentId?.name ?? 'Unknown',
+        rollNumber: d.studentId?.rollNumber ?? '—',
         fromDate: d.fromDate,
         toDate: d.toDate,
         destination: d.destination,
         leaveType: d.leaveType,
-        hostel: (d.studentId as unknown as { hostelId?: { name: string } })?.hostelId?.name ?? '—',
-        room: (d.studentId as unknown as { roomId?: { roomNumber: string } })?.roomId?.roomNumber ?? '—',
+        hostel: d.studentId?.hostelId?.name ?? '—',
+        room: d.studentId?.roomId?.roomNumber ?? '—',
       });
     } catch {
       setError('Leave pass not found or invalid ID.');
@@ -136,9 +137,30 @@ export function QRScanPage() {
               </div>
             </div>
             {isValid && (
-              <div className="pass-actions">
+              <div className="pass-actions" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
                 <button className="btn btn--success" onClick={handleRecordExit}>Record Exit</button>
                 <button className="btn btn--secondary" onClick={handleRecordReturn}>Record Return</button>
+                <button
+                  className="btn btn--outline"
+                  onClick={async () => {
+                    try {
+                      const res = await api.get(`/leaves/${leaveInfo._id}/pdf`, { responseType: 'blob' });
+                      const blob = new Blob([res.data], { type: 'application/pdf' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `leave-pass-${leaveInfo.leaveId}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    } catch {
+                      setRecordMsg('❌ Could not download PDF pass.');
+                    }
+                  }}
+                >
+                  📄 Download Pass PDF
+                </button>
               </div>
             )}
             {recordMsg && <p className="guard-msg">{recordMsg}</p>}

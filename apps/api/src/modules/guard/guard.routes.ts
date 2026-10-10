@@ -36,8 +36,20 @@ router.post(
   guardController.markEntry,
 );
 
+router.post(
+  '/scan',
+  authorize(UserRole.GUARD),
+  guardController.scanGate,
+);
+
 router.get(
   '/log',
+  authorize(UserRole.GUARD, UserRole.ADMIN),
+  guardController.getGateLog,
+);
+
+router.get(
+  '/logs',
   authorize(UserRole.GUARD, UserRole.ADMIN),
   guardController.getGateLog,
 );

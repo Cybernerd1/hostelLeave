@@ -58,10 +58,13 @@ export const createLeaveSchema = z
 
 /** Approve/reject leave schema */
 export const approveLeaveSchema = z.object({
-  action: z.nativeEnum(ApprovalAction, {
-    required_error: 'Action is required',
-    invalid_type_error: 'Action must be either approved or rejected',
-  }),
+  action: z.preprocess(
+    (val) => (val === 'approve' ? ApprovalAction.APPROVED : val === 'reject' ? ApprovalAction.REJECTED : val),
+    z.nativeEnum(ApprovalAction, {
+      required_error: 'Action is required',
+      invalid_type_error: 'Action must be either approved or rejected',
+    }),
+  ),
   remarks: z
     .string()
     .max(500, 'Remarks must not exceed 500 characters')

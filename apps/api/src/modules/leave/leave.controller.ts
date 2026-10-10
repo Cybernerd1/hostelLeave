@@ -8,11 +8,13 @@ import { asyncHandler } from '../../middleware/asyncHandler';
 import { leaveService } from './leave.service';
 import { sendSuccess, sendPaginated, sendCreated } from '../../utils/response.util';
 import { pdfService } from '../pdf/pdf.service';
+import { cloudinaryService } from '../../utils/cloudinary.service';
 
 /** POST /api/v1/leaves - Apply for leave */
 export const applyLeave = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const documents = (req.files as Express.Multer.File[])?.map((f) => `/uploads/documents/${f.filename}`) || [];
+  const files = (req.files as Express.Multer.File[]) || [];
+  const documents = await cloudinaryService.uploadMultipleFiles(files);
 
   const leaveRequest = await leaveService.applyLeave(userId, req.body, documents);
 

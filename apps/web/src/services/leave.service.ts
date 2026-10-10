@@ -86,10 +86,12 @@ export const leaveApi = {
 
   processApproval: async (
     id: string,
-    action: 'approve' | 'reject',
+    action: 'approve' | 'reject' | 'approved' | 'rejected',
     remarks?: string,
   ) => {
-    const response = await api.put(`/leaves/${id}/approve`, { action, remarks });
+    const normalizedAction =
+      action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : action;
+    const response = await api.put(`/leaves/${id}/approve`, { action: normalizedAction, remarks });
     return response.data;
   },
 

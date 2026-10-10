@@ -161,45 +161,60 @@ export class LeaveService {
     }
 
     // Validate that this role can approve at the current stage
-    const workflow = APPROVAL_WORKFLOW[approverRole];
+    let workflow = APPROVAL_WORKFLOW[approverRole];
+
+    if (!workflow && (approverRole === UserRole.ADMIN || approverRole === UserRole.VICE_CHANCELLOR)) {
+      if (leaveRequest.status === LeaveStatus.PENDING_PARENT) {
+        workflow = APPROVAL_WORKFLOW[UserRole.PARENT];
+      } else if (leaveRequest.status === LeaveStatus.PENDING_WARDEN) {
+        workflow = APPROVAL_WORKFLOW[UserRole.WARDEN];
+      } else if (leaveRequest.status === LeaveStatus.PENDING_CHIEF_WARDEN) {
+        workflow = APPROVAL_WORKFLOW[UserRole.CHIEF_WARDEN];
+      } else if (leaveRequest.status === LeaveStatus.PENDING_HOD) {
+        workflow = APPROVAL_WORKFLOW[UserRole.HOD];
+      }
+    }
+
     if (!workflow) {
       throw AppError.forbidden('Your role cannot approve/reject leave requests');
     }
 
     if (leaveRequest.status !== workflow.fromStatus) {
       throw AppError.badRequest(
-        `This leave is not pending your approval. Current status: ${leaveRequest.status}`,
+        `This leave is not pending approval at this stage. Current status: ${leaveRequest.status}`,
       );
     }
 
-    // For warden: verify the student belongs to their hostel
+    // Get student document (may already be populated via leaveRequest.studentId)
+    const studentDoc = (leaveRequest.studentId as any)?._id
+      ? (leaveRequest.studentId as any)
+      : await Student.findById(leaveRequest.studentId);
+
+    // For warden: verify the student belongs to their hostel if warden is linked to a specific hostel
     if (approverRole === UserRole.WARDEN) {
-      const student = await Student.findById(leaveRequest.studentId);
-      if (student) {
+      if (studentDoc) {
         const hostel = await Hostel.findOne({ wardenId: approverId });
-        if (!hostel || hostel._id.toString() !== student.hostelId.toString()) {
+        if (hostel && studentDoc.hostelId && hostel._id.toString() !== studentDoc.hostelId.toString()) {
           throw AppError.forbidden('This student is not in your hostel');
         }
       }
     }
 
-    // For chief warden: verify the student belongs to their hostel
+    // For chief warden: verify the student belongs to their hostel if linked
     if (approverRole === UserRole.CHIEF_WARDEN) {
-      const student = await Student.findById(leaveRequest.studentId);
-      if (student) {
+      if (studentDoc) {
         const hostel = await Hostel.findOne({ chiefWardenId: approverId });
-        if (!hostel || hostel._id.toString() !== student.hostelId.toString()) {
+        if (hostel && studentDoc.hostelId && hostel._id.toString() !== studentDoc.hostelId.toString()) {
           throw AppError.forbidden('This student is not in your hostel');
         }
       }
     }
 
-    // For HOD: verify the student belongs to their department
+    // For HOD: verify the student belongs to their department if linked
     if (approverRole === UserRole.HOD) {
-      const student = await Student.findById(leaveRequest.studentId);
-      if (student) {
+      if (studentDoc) {
         const dept = await Department.findOne({ hodId: approverId });
-        if (!dept || dept._id.toString() !== student.departmentId.toString()) {
+        if (dept && studentDoc.departmentId && dept._id.toString() !== studentDoc.departmentId.toString()) {
           throw AppError.forbidden('This student is not in your department');
         }
       }
@@ -207,10 +222,10 @@ export class LeaveService {
 
     // For parent: verify this is their child
     if (approverRole === UserRole.PARENT) {
-      const student = await Student.findById(leaveRequest.studentId);
-      if (student) {
+      if (studentDoc) {
         const parent = await Parent.findOne({ userId: approverId });
-        if (!parent || parent._id.toString() !== student.parentId?.toString()) {
+        const studentParentId = studentDoc.parentId?._id || studentDoc.parentId;
+        if (parent && studentParentId && parent._id.toString() !== studentParentId.toString()) {
           throw AppError.forbidden('This is not your child\'s leave request');
         }
       }
@@ -250,7 +265,7 @@ export class LeaveService {
     }
 
     // Send notifications
-    const student = await Student.findById(leaveRequest.studentId);
+    const student = studentDoc;
     if (student) {
       const studentUser = await User.findById(student.userId);
 
@@ -437,13 +452,22 @@ export class LeaveService {
     query: { page: number; limit: number; search?: string; sortOrder?: string },
   ): Promise<{ data: ILeaveRequestDocument[]; pagination: PaginationMeta }> {
     const workflow = APPROVAL_WORKFLOW[role];
-    if (!workflow) {
+    const filter: Record<string, unknown> = {};
+
+    if (role === UserRole.ADMIN || role === UserRole.VICE_CHANCELLOR) {
+      filter.status = {
+        $in: [
+          LeaveStatus.PENDING_PARENT,
+          LeaveStatus.PENDING_WARDEN,
+          LeaveStatus.PENDING_CHIEF_WARDEN,
+          LeaveStatus.PENDING_HOD,
+        ],
+      };
+    } else if (workflow) {
+      filter.status = workflow.fromStatus;
+    } else {
       throw AppError.forbidden('Your role does not have approval permissions');
     }
-
-    const filter: Record<string, unknown> = {
-      status: workflow.fromStatus,
-    };
 
     // Scope to relevant students based on role
     if (role === UserRole.WARDEN) {

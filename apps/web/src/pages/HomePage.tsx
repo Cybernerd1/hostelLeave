@@ -5,6 +5,7 @@
  * Each role card navigates to /login?role=<role> with demo credentials shown.
  */
 
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './HomePage.css';
 
@@ -15,7 +16,7 @@ interface RoleCard {
   accent: string;
   gradientFrom: string;
   gradientTo: string;
-  icon: JSX.Element;
+  icon: React.ReactNode;
 }
 
 const ROLE_CARDS: RoleCard[] = [

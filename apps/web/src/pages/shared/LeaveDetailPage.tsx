@@ -117,14 +117,10 @@ export function LeaveDetailPage() {
     }
   };
 
-  // Show PDF button only for the student who owns the leave when status is approved/completed
+  // Show PDF button for authorized roles (student, guard, warden, chief_warden, hod, admin) when status is approved/completed
   const isApprovedOrCompleted = leave?.status === 'approved' || leave?.status === 'completed';
-  const isOwningStudent =
-    user?.role === 'student' &&
-    leave?.studentId?.userId !== undefined &&
-    String(leave.studentId.userId) === String(user._id);
-
-  const canDownloadPDF = isApprovedOrCompleted && isOwningStudent;
+  const allowedRoles = ['student', 'guard', 'warden', 'chief_warden', 'hod', 'admin'];
+  const canDownloadPDF = isApprovedOrCompleted && allowedRoles.includes(user?.role || '');
 
   const statusInfo = leave ? (STATUS_CONFIG[leave.status] ?? STATUS_CONFIG['draft']) : null;
 

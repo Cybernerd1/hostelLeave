@@ -30,6 +30,20 @@ export const markEntry = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, guardLog, 'Entry marked successfully. Leave completed.');
 });
 
+export const scanGate = asyncHandler(async (req: Request, res: Response) => {
+  const guardId = req.user!.userId;
+  const { leaveId, action, remarks, location } = req.body;
+  const targetId = leaveId;
+
+  if (action === 'exit') {
+    const guardLog = await guardService.markExit(guardId, targetId, remarks, location);
+    return sendSuccess(res, guardLog, 'Exit recorded successfully');
+  } else {
+    const guardLog = await guardService.markEntry(guardId, targetId, remarks, location);
+    return sendSuccess(res, guardLog, 'Return recorded successfully');
+  }
+});
+
 export const getGateLog = asyncHandler(async (req: Request, res: Response) => {
   const guardId = req.user!.role === 'admin' ? undefined : req.user!.userId;
   const { page = 1, limit = 20, action, fromDate, toDate } = req.query;

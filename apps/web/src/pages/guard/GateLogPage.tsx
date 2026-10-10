@@ -9,7 +9,7 @@ import './GuardPages.css';
 
 interface GateLogEntry {
   _id: string;
-  leaveId: { leaveId: string; studentId: { name: string; rollNumber: string } };
+  leaveId: { _id?: string; leaveId?: string; studentId?: { name: string; rollNumber: string } };
   action: 'exit' | 'return';
   timestamp: string;
   guardId: { name: string };
@@ -55,25 +55,56 @@ export function GateLogPage() {
                   <th>Leave ID</th>
                   <th>Action</th>
                   <th>Guard</th>
+                  <th>Pass PDF</th>
                 </tr>
               </thead>
               <tbody>
-                {logs.map((l) => (
-                  <tr key={l._id}>
-                    <td className="cell-secondary">{formatDate(l.timestamp)}</td>
-                    <td>
-                      <div className="cell-primary">{l.leaveId?.studentId?.name ?? '—'}</div>
-                      <div className="cell-secondary">{l.leaveId?.studentId?.rollNumber}</div>
-                    </td>
-                    <td><code className="leave-id">{l.leaveId?.leaveId ?? '—'}</code></td>
-                    <td>
-                      <span className={`status-badge status-badge--${l.action === 'exit' ? 'rejected' : 'approved'}`}>
-                        {l.action === 'exit' ? '↑ Exit' : '↓ Return'}
-                      </span>
-                    </td>
-                    <td>{l.guardId?.name ?? '—'}</td>
-                  </tr>
-                ))}
+                {logs.map((l) => {
+                  const leaveIdStr = typeof l.leaveId === 'object' ? l.leaveId?._id || l.leaveId?.leaveId : l.leaveId;
+                  const displayLeaveId = typeof l.leaveId === 'object' ? l.leaveId?.leaveId : l.leaveId;
+                  return (
+                    <tr key={l._id}>
+                      <td className="cell-secondary">{formatDate(l.timestamp)}</td>
+                      <td>
+                        <div className="cell-primary">{typeof l.leaveId === 'object' ? l.leaveId?.studentId?.name : '—'}</div>
+                        <div className="cell-secondary">{typeof l.leaveId === 'object' ? l.leaveId?.studentId?.rollNumber : ''}</div>
+                      </td>
+                      <td><code className="leave-id">{displayLeaveId || '—'}</code></td>
+                      <td>
+                        <span className={`status-badge status-badge--${l.action === 'exit' ? 'rejected' : 'approved'}`}>
+                          {l.action === 'exit' ? '↑ Exit' : '↓ Return'}
+                        </span>
+                      </td>
+                      <td>{l.guardId?.name ?? '—'}</td>
+                      <td>
+                        <button
+                          className="btn btn--outline btn--sm"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                          onClick={async () => {
+                            try {
+                              const targetId = leaveIdStr;
+                              if (!targetId) return;
+                              const res = await api.get(`/leaves/${targetId}/pdf`, { responseType: 'blob' });
+                              const blob = new Blob([res.data], { type: 'application/pdf' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `leave-pass-${displayLeaveId || 'pass'}.pdf`;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(url);
+                            } catch {
+                              alert('Could not download PDF pass.');
+                            }
+                          }}
+                        >
+                          📄 Download PDF
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
