@@ -46,7 +46,7 @@ export class CloudinaryService {
       try {
         const result = await cloudinary.uploader.upload(fullPath, {
           folder: folder,
-          resource_type: 'auto',
+          resource_type: 'raw',  // Use 'raw' so PDFs/docs are served with correct Content-Type
           use_filename: true,
           unique_filename: true,
         });
@@ -98,7 +98,7 @@ export class CloudinaryService {
         publicId = folderName ? `${folderName}/${fileName}` : fileName;
       }
 
-      await cloudinary.uploader.destroy(publicId);
+      await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
       return true;
     } catch (err) {
       logger.error('Error deleting file from Cloudinary:', err);

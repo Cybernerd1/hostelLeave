@@ -25,6 +25,7 @@ import { UnauthorizedPage } from '@/pages/UnauthorizedPage';
 import { StudentDashboard } from '@/pages/student/StudentDashboard';
 import { ParentDashboard } from '@/pages/parent/ParentDashboard';
 import { WardenDashboard } from '@/pages/warden/WardenDashboard';
+import { ChiefWardenManagePage } from '@/pages/warden/ChiefWardenManagePage';
 import { GuardDashboard } from '@/pages/guard/GuardDashboard';
 import { AdminDashboard } from '@/pages/admin/AdminDashboard';
 
@@ -108,14 +109,15 @@ export default function App() {
           {/* ─── Chief Warden Routes ─────────────────────────────────── */}
           <Route element={<ProtectedRoute allowedRoles={[UserRole.CHIEF_WARDEN]} />}>
             <Route element={<DashboardLayout />}>
-              <Route path="/chief-warden/dashboard" element={<WardenDashboard />} />
-              <Route path="/chief-warden/approvals" element={<PendingApprovalsPage />} />
-              <Route path="/chief-warden/leaves" element={<AllLeavesPage />} />
-              <Route path="/chief-warden/leaves/:id" element={<LeaveDetailPage />} />
-              <Route path="/chief-warden/students" element={<StudentsListPage />} />
-              <Route path="/chief-warden/reports" element={<ReportsPage />} />
+              <Route path="/chief-warden/dashboard"     element={<WardenDashboard />} />
+              <Route path="/chief-warden/approvals"     element={<PendingApprovalsPage />} />
+              <Route path="/chief-warden/leaves"        element={<AllLeavesPage />} />
+              <Route path="/chief-warden/leaves/:id"    element={<LeaveDetailPage />} />
+              <Route path="/chief-warden/students"      element={<StudentsListPage />} />
+              <Route path="/chief-warden/manage"        element={<ChiefWardenManagePage />} />
+              <Route path="/chief-warden/reports"       element={<ReportsPage />} />
               <Route path="/chief-warden/notifications" element={<NotificationsPage />} />
-              <Route path="/chief-warden/profile" element={<ProfilePage />} />
+              <Route path="/chief-warden/profile"       element={<ProfilePage />} />
             </Route>
           </Route>
 

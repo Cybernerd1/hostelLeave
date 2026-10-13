@@ -70,6 +70,8 @@ const ICONS = {
     'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
   assignParent:
     'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z',
+  hostelManage:
+    'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
 };
 
 
@@ -119,13 +121,14 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
     basePath: '/chief-warden',
     accent: '#0891b2',
     navItems: [
-      { label: 'Dashboard', path: '/chief-warden/dashboard', icon: ICONS.dashboard },
-      { label: 'Approvals', path: '/chief-warden/approvals', icon: ICONS.approvals },
-      { label: 'All Leaves', path: '/chief-warden/leaves', icon: ICONS.leaves },
-      { label: 'Students', path: '/chief-warden/students', icon: ICONS.students },
-      { label: 'Reports', path: '/chief-warden/reports', icon: ICONS.reports },
-      { label: 'Notifications', path: '/chief-warden/notifications', icon: ICONS.notifications },
-      { label: 'Profile', path: '/chief-warden/profile', icon: ICONS.profile },
+      { label: 'Dashboard',      path: '/chief-warden/dashboard', icon: ICONS.dashboard },
+      { label: 'Approvals',      path: '/chief-warden/approvals', icon: ICONS.approvals },
+      { label: 'All Leaves',     path: '/chief-warden/leaves',    icon: ICONS.leaves },
+      { label: 'Students',       path: '/chief-warden/students',  icon: ICONS.students },
+      { label: 'Manage Hostels', path: '/chief-warden/manage',    icon: ICONS.hostelManage },
+      { label: 'Reports',        path: '/chief-warden/reports',   icon: ICONS.reports },
+      { label: 'Notifications',  path: '/chief-warden/notifications', icon: ICONS.notifications },
+      { label: 'Profile',        path: '/chief-warden/profile',   icon: ICONS.profile },
     ],
   },
 

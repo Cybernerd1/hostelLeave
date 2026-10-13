@@ -52,6 +52,16 @@ export const assignParent = asyncHandler(async (req: Request, res: Response) => 
   sendSuccess(res, result, 'Parent assigned successfully');
 });
 
+/** PUT /api/v1/admin/students/:id/assign-hostel - Assign/unassign hostel (chief warden or admin) */
+export const assignHostelToStudent = asyncHandler(async (req: Request, res: Response) => {
+  const student = await adminService.assignHostelToStudent(
+    req.params.id,
+    req.body.hostelId ?? null,
+    req.user!.userId,
+  );
+  sendSuccess(res, student, 'Hostel assignment updated successfully');
+});
+
 // ─── Parents ──────────────────────────────────────────────────────────────
 
 export const createParent = asyncHandler(async (req: Request, res: Response) => {
@@ -170,6 +180,24 @@ export const getStaff = asyncHandler(async (req: Request, res: Response) => {
   const staff = await adminService.getStaff(req.query.role as string);
   sendSuccess(res, staff, 'Staff retrieved');
 });
+
+/** POST /api/v1/admin/wardens - Create a warden (chief warden or admin) */
+export const createWardenByChiefWarden = asyncHandler(async (req: Request, res: Response) => {
+  const data = { ...req.body, role: 'warden' }; // Force role = warden
+  const staff = await adminService.createStaff(data, req.user!.userId);
+  sendCreated(res, staff, 'Warden created successfully');
+});
+
+/** PUT /api/v1/admin/hostels/:id/assign-warden - Assign warden to hostel */
+export const assignWardenToHostel = asyncHandler(async (req: Request, res: Response) => {
+  const hostel = await adminService.assignWardenToHostel(
+    req.params.id,
+    req.body.wardenId,
+    req.user!.userId,
+  );
+  sendSuccess(res, hostel, 'Warden assigned to hostel successfully');
+});
+
 
 // ─── Audit Logs ───────────────────────────────────────────────────────────
 

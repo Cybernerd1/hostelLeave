@@ -200,6 +200,86 @@ export class AdminService {
     return student;
   }
 
+  /**
+   * Assign (or reassign / unassign) a hostel to a student.
+   * hostelId = null removes the assignment.
+   * hostelId/roomId are required in the schema, so unassignment and
+   * room-clearing go through updateOne with $unset to bypass validators.
+   */
+  async assignHostelToStudent(studentId: string, hostelId: string | null, actorId: string) {
+    const student = await Student.findById(studentId);
+    if (!student) { throw AppError.notFound('Student not found'); }
+
+    const previousHostelId = student.hostelId;
+
+    // ── Unassign ──
+    if (!hostelId) {
+      if (!previousHostelId) { throw AppError.badRequest('Student has no hostel assigned'); }
+      await Student.updateOne({ _id: student._id }, { $unset: { hostelId: 1, roomId: 1 } });
+      await Hostel.findByIdAndUpdate(previousHostelId, { $inc: { occupancy: -1 } });
+
+      await createAuditLog({
+        userId: actorId,
+        action: 'update',
+        entity: 'Student',
+        entityId: studentId,
+        previousData: { hostelId: previousHostelId },
+        description: `Hostel removed for student ${student.name}`,
+      });
+      logger.info(`Hostel unassigned from student ${studentId} by ${actorId}`);
+      return Student.findById(studentId)
+        .populate('hostelId', 'name type')
+        .populate('roomId', 'roomNumber floor')
+        .lean();
+    }
+
+    // ── Assign / reassign ──
+    const hostel = await Hostel.findById(hostelId);
+    if (!hostel) { throw AppError.notFound('Hostel not found'); }
+    if (!hostel.isActive) { throw AppError.badRequest('Hostel is not active'); }
+
+    if (previousHostelId && String(previousHostelId) === String(hostel._id)) {
+      throw AppError.badRequest('Student is already assigned to this hostel');
+    }
+
+    if (hostel.type === 'boys' && student.gender !== 'male') {
+      throw AppError.badRequest(`${hostel.name} is a boys' hostel — this student cannot be assigned here`);
+    }
+    if (hostel.type === 'girls' && student.gender !== 'female') {
+      throw AppError.badRequest(`${hostel.name} is a girls' hostel — this student cannot be assigned here`);
+    }
+
+    if (hostel.occupancy >= hostel.capacity) {
+      throw AppError.badRequest(`${hostel.name} is at full capacity (${hostel.capacity})`);
+    }
+
+    await Student.updateOne(
+      { _id: student._id },
+      { $set: { hostelId: hostel._id }, $unset: { roomId: 1 } },
+    );
+
+    if (previousHostelId) {
+      await Hostel.findByIdAndUpdate(previousHostelId, { $inc: { occupancy: -1 } });
+    }
+    await Hostel.findByIdAndUpdate(hostel._id, { $inc: { occupancy: 1 } });
+
+    await createAuditLog({
+      userId: actorId,
+      action: 'update',
+      entity: 'Student',
+      entityId: studentId,
+      previousData: { hostelId: previousHostelId },
+      newData: { hostelId: hostel._id },
+      description: `Student ${student.name} assigned to hostel ${hostel.name}`,
+    });
+
+    logger.info(`Hostel ${hostel._id} assigned to student ${studentId} by ${actorId}`);
+    return Student.findById(studentId)
+      .populate('hostelId', 'name type')
+      .populate('roomId', 'roomNumber floor')
+      .lean();
+  }
+
   // ─── Parents ──────────────────────────────────────────────────────────────
 
   async createParent(data: Record<string, unknown>, adminId: string) {
@@ -404,6 +484,40 @@ export class AdminService {
     });
     return hostel;
   }
+
+  async assignWardenToHostel(hostelId: string, wardenUserId: string | null, actorId: string) {
+    const hostel = await Hostel.findById(hostelId);
+    if (!hostel) { throw AppError.notFound('Hostel not found'); }
+
+    if (wardenUserId) {
+      const warden = await User.findById(wardenUserId);
+      if (!warden) { throw AppError.notFound('Warden user not found'); }
+      if (warden.role !== 'warden') { throw AppError.badRequest('User is not a warden'); }
+    }
+
+    const previousWardenId = hostel.wardenId;
+    hostel.wardenId = wardenUserId ? new mongoose.Types.ObjectId(wardenUserId) : undefined;
+    await hostel.save();
+
+    await hostel.populate('wardenId', 'name email');
+    await hostel.populate('chiefWardenId', 'name email');
+
+    await createAuditLog({
+      userId: actorId,
+      action: 'update',
+      entity: 'Hostel',
+      entityId: hostelId,
+      previousData: { wardenId: previousWardenId },
+      newData: { wardenId: wardenUserId },
+      description: wardenUserId
+        ? `Warden assigned to hostel ${hostel.name}`
+        : `Warden removed from hostel ${hostel.name}`,
+    });
+
+    logger.info(`Hostel ${hostelId} warden updated by ${actorId}`);
+    return hostel;
+  }
+
 
   // ─── Rooms ────────────────────────────────────────────────────────────────
 

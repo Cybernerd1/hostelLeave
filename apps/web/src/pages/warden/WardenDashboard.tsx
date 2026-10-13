@@ -16,9 +16,28 @@ interface StatsData {
   studentsOutCount?: number;
 }
 
+const ROLE_BASE_PATH: Record<string, string> = {
+  warden:          '/warden',
+  chief_warden:    '/chief-warden',
+  hod:             '/hod',
+  vice_chancellor: '/vc',
+  admin:           '/admin',
+};
+
+const ROLE_NAME: Record<string, string> = {
+  warden:          'Warden',
+  chief_warden:    'Chief Warden',
+  hod:             'Head of Department',
+  vice_chancellor: 'Vice Chancellor',
+  admin:           'Admin',
+};
+
 export function WardenDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const basePath = ROLE_BASE_PATH[user?.role || ''] || '/warden';
+  const roleLabel = ROLE_NAME[user?.role || ''] || 'Warden';
 
   const [stats, setStats] = useState<StatsData>({});
   const [pendingLeaves, setPendingLeaves] = useState<LeaveRequest[]>([]);
@@ -47,49 +66,49 @@ export function WardenDashboard() {
       <div className="dashboard-page__header">
         <div>
           <h1 className="dashboard-page__greeting">
-            Welcome, {user?.name?.split(' ')[0] || 'Warden'}! 👋
+            Welcome, {user?.name?.split(' ')[0] || roleLabel}! 👋
           </h1>
-          <p className="dashboard-page__subtitle">Manage hostel leave approvals and monitor activity</p>
+          <p className="dashboard-page__subtitle">Manage hostel leave approvals and monitor activity — <strong>{roleLabel}</strong></p>
         </div>
         <button
           className="btn btn--primary"
-          onClick={() => navigate('/warden/approvals')}
+          onClick={() => navigate(`${basePath}/approvals`)}
         >
           View Pending Approvals ({pendingLeaves.length})
         </button>
       </div>
 
       <div className="dashboard-page__stats-grid">
-        <Card variant="default" padding="md" hoverable onClick={() => navigate('/warden/approvals')}>
+        <Card variant="default" padding="md" hoverable onClick={() => navigate(`${basePath}/approvals`)}>
           <div className="stat-card">
             <div className="stat-card__icon stat-card__icon--warning">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
             <div className="stat-card__content">
-              <span className="stat-card__value">{loading ? '…' : stats.pendingCount ?? pendingLeaves.length}</span>
+              <span className="stat-card__value">{loading ? '…' : pendingLeaves.length}</span>
               <span className="stat-card__label">Pending Approvals</span>
             </div>
           </div>
         </Card>
-        <Card variant="default" padding="md" hoverable onClick={() => navigate('/warden/leaves')}>
+        <Card variant="default" padding="md" hoverable onClick={() => navigate(`${basePath}/leaves`)}>
           <div className="stat-card">
             <div className="stat-card__icon stat-card__icon--primary">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             </div>
             <div className="stat-card__content">
-              <span className="stat-card__value">{loading ? '…' : stats.activeCount ?? stats.approvedCount ?? 0}</span>
-              <span className="stat-card__label">Active / Approved Leaves</span>
+              <span className="stat-card__value">{loading ? '…' : (stats as Record<string, number>).approved ?? 0}</span>
+              <span className="stat-card__label">Approved Leaves</span>
             </div>
           </div>
         </Card>
-        <Card variant="default" padding="md" hoverable onClick={() => navigate('/warden/leaves')}>
+        <Card variant="default" padding="md" hoverable onClick={() => navigate(`${basePath}/leaves`)}>
           <div className="stat-card">
             <div className="stat-card__icon stat-card__icon--info">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
             </div>
             <div className="stat-card__content">
-              <span className="stat-card__value">{loading ? '…' : stats.studentsOutCount ?? 0}</span>
-              <span className="stat-card__label">Students Out</span>
+              <span className="stat-card__value">{loading ? '…' : (stats as Record<string, number>).total ?? 0}</span>
+              <span className="stat-card__label">Total Leaves</span>
             </div>
           </div>
         </Card>
@@ -98,7 +117,7 @@ export function WardenDashboard() {
       <Card variant="default" padding="lg">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Recent Pending Requests</h3>
-          <button className="btn btn--ghost btn--sm" onClick={() => navigate('/warden/approvals')}>See All →</button>
+          <button className="btn btn--ghost btn--sm" onClick={() => navigate(`${basePath}/approvals`)}>See All →</button>
         </div>
 
         {loading ? (
@@ -132,7 +151,7 @@ export function WardenDashboard() {
                     <td>{l.leaveType}</td>
                     <td>{formatDate(l.fromDate)} → {formatDate(l.toDate)}</td>
                     <td>
-                      <button className="btn btn--outline btn--sm" onClick={() => navigate(`/warden/leaves/${l._id}`)}>
+                      <button className="btn btn--outline btn--sm" onClick={() => navigate(`${basePath}/leaves/${l._id}`)}>
                         Review
                       </button>
                     </td>

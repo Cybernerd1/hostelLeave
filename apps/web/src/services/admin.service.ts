@@ -73,6 +73,10 @@ export interface HostelRecord {
   capacity: number;
   occupancy: number;
   isActive: boolean;
+  address?: string;
+  contactNumber?: string;
+  wardenId?: { _id: string; name: string; email: string };
+  chiefWardenId?: { _id: string; name: string; email: string };
 }
 
 export interface RoomRecord {
@@ -155,6 +159,15 @@ export const adminApi = {
     await api.put(`/admin/students/${studentId}/assign-parent`, { parentId });
   },
 
+  // Chief Warden: assign (or null to unassign) a hostel to a student
+  assignHostelToStudent: async (studentId: string, hostelId: string | null): Promise<StudentRecord> => {
+    const res = await api.put<{ success: boolean; data: StudentRecord }>(
+      `/admin/students/${studentId}/assign-hostel`,
+      { hostelId },
+    );
+    return res.data.data;
+  },
+
   // Parents
   getParents: async (params?: {
     page?: number;
@@ -181,6 +194,28 @@ export const adminApi = {
   getHostels: async (params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<HostelRecord>> => {
     const res = await api.get('/admin/hostels', { params });
     return { data: res.data.data, pagination: res.data.pagination };
+  },
+
+  getHostelsWithWardens: async (): Promise<HostelRecord[]> => {
+    const res = await api.get('/admin/hostels', { params: { limit: 100 } });
+    return res.data.data as HostelRecord[];
+  },
+
+  // Chief Warden: create warden
+  createWarden: async (data: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+  }): Promise<StaffRecord> => {
+    const res = await api.post<{ success: boolean; data: StaffRecord }>('/admin/wardens', { ...data, role: 'warden' });
+    return res.data.data;
+  },
+
+  // Chief Warden: assign warden to hostel
+  assignWardenToHostel: async (hostelId: string, wardenId: string | null): Promise<HostelRecord> => {
+    const res = await api.put<{ success: boolean; data: HostelRecord }>(`/admin/hostels/${hostelId}/assign-warden`, { wardenId });
+    return res.data.data;
   },
 
   // Rooms

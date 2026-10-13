@@ -29,6 +29,7 @@ const router = Router();
 
 const ADMIN_ROLES = [UserRole.ADMIN] as const;
 const MANAGE_STUDENT_ROLES = [UserRole.ADMIN, UserRole.HOD, UserRole.CHIEF_WARDEN] as const;
+const CHIEF_WARDEN_ROLES = [UserRole.ADMIN, UserRole.CHIEF_WARDEN] as const;
 
 // All admin routes require authentication
 router.use(authenticate);
@@ -41,6 +42,7 @@ router.post('/students', authorize(...ADMIN_ROLES), validateBody(createStudentSc
 router.get('/students', authorize(...MANAGE_STUDENT_ROLES), adminController.getStudents);
 router.get('/students/:id', authorize(...MANAGE_STUDENT_ROLES), adminController.getStudentById);
 router.put('/students/:id/assign-parent', authorize(...MANAGE_STUDENT_ROLES), adminController.assignParent);
+router.put('/students/:id/assign-hostel', authorize(...CHIEF_WARDEN_ROLES), adminController.assignHostelToStudent);
 router.put('/students/:id', authorize(...ADMIN_ROLES), validateBody(updateStudentSchema), adminController.updateStudent);
 router.delete('/students/:id', authorize(...ADMIN_ROLES), adminController.deleteStudent);
 
@@ -72,6 +74,10 @@ router.put('/rooms/:id', authorize(...ADMIN_ROLES), validateBody(updateRoomSchem
 // Staff
 router.post('/staff', authorize(...ADMIN_ROLES), validateBody(createStaffSchema), adminController.createStaff);
 router.get('/staff', authorize(...MANAGE_STUDENT_ROLES), adminController.getStaff);
+
+// Chief Warden management: create warden + assign warden to hostel
+router.post('/wardens', authorize(...CHIEF_WARDEN_ROLES), validateBody(createStaffSchema), adminController.createWardenByChiefWarden);
+router.put('/hostels/:id/assign-warden', authorize(...CHIEF_WARDEN_ROLES), adminController.assignWardenToHostel);
 
 // Audit Logs
 router.get('/audit-logs', authorize(...ADMIN_ROLES), adminController.getAuditLogs);

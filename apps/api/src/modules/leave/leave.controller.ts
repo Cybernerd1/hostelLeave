@@ -105,9 +105,38 @@ export const getAllLeaves = asyncHandler(async (req: Request, res: Response) => 
   sendPaginated(res, result.data, result.pagination, 'Leaves retrieved');
 });
 
-/** GET /api/v1/leaves/stats - Get leave statistics */
+/** GET /api/v1/leaves/stats - Get leave statistics (role-scoped) */
 export const getLeaveStats = asyncHandler(async (req: Request, res: Response) => {
-  const stats = await leaveService.getLeaveStats();
+  const { userId, role } = req.user!;
+  let filter: Record<string, unknown> = {};
+
+  if (role === 'warden') {
+    const { Hostel } = await import('../../models/hostel.model');
+    const { Student } = await import('../../models/student.model');
+    const hostel = await Hostel.findOne({ wardenId: userId });
+    if (hostel) {
+      const studentIds = await Student.find({ hostelId: hostel._id }).distinct('_id');
+      filter = { studentId: { $in: studentIds } };
+    }
+  } else if (role === 'chief_warden') {
+    const { Hostel } = await import('../../models/hostel.model');
+    const { Student } = await import('../../models/student.model');
+    const hostel = await Hostel.findOne({ chiefWardenId: userId });
+    if (hostel) {
+      const studentIds = await Student.find({ hostelId: hostel._id }).distinct('_id');
+      filter = { studentId: { $in: studentIds } };
+    }
+  } else if (role === 'hod') {
+    const { Department } = await import('../../models/department.model');
+    const { Student } = await import('../../models/student.model');
+    const dept = await Department.findOne({ hodId: userId });
+    if (dept) {
+      const studentIds = await Student.find({ departmentId: dept._id }).distinct('_id');
+      filter = { studentId: { $in: studentIds } };
+    }
+  }
+
+  const stats = await leaveService.getLeaveStats(filter);
 
   sendSuccess(res, stats, 'Leave statistics retrieved');
 });

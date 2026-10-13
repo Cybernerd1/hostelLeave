@@ -2,7 +2,7 @@
  * Leave Detail Page
  *
  * Full implementation showing all leave info, approval timeline,
- * and a PDF download button for approved leaves (student view only).
+ * workflow progress tracker, and approve/reject actions for approver roles.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -44,6 +44,25 @@ const ROLE_LABELS: Record<string, string> = {
   chief_warden:    'Chief Warden',
   hod:             'HOD',
   vice_chancellor: 'Vice Chancellor',
+  admin:           'Admin',
+};
+
+/** The 4 fixed workflow stages shown in the progress tracker */
+const WORKFLOW_STAGES: { role: string; label: string; status: string }[] = [
+  { role: 'parent',       label: 'Parent',       status: 'pending_parent'       },
+  { role: 'warden',       label: 'Warden',       status: 'pending_warden'       },
+  { role: 'chief_warden', label: 'Chief Warden', status: 'pending_chief_warden' },
+  { role: 'hod',          label: 'HOD',          status: 'pending_hod'          },
+];
+
+/** Roles that need approval and what leave status they act on */
+const APPROVER_REQUIRED_STATUS: Record<string, string> = {
+  parent:          'pending_parent',
+  warden:          'pending_warden',
+  chief_warden:    'pending_chief_warden',
+  hod:             'pending_hod',
+  admin:           '', // admin can act on any pending
+  vice_chancellor: '',
 };
 
 function formatDate(dateStr: string | Date) {
@@ -79,6 +98,13 @@ export function LeaveDetailPage() {
   const [error, setError] = useState('');
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState('');
+
+  // Approval action state
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [actionSuccess, setActionSuccess] = useState('');
+  const [remarks, setRemarks] = useState('');
+  const [showRejectForm, setShowRejectForm] = useState(false);
 
   const fetchLeave = useCallback(async () => {
     if (!id) return;
@@ -117,12 +143,68 @@ export function LeaveDetailPage() {
     }
   };
 
-  // Show PDF button for authorized roles (student, guard, warden, chief_warden, hod, admin) when status is approved/completed
+  const handleApprovalAction = async (action: 'approved' | 'rejected') => {
+    if (!id) return;
+    if (action === 'rejected' && !remarks.trim()) {
+      setActionError('Please provide a reason for rejection.');
+      return;
+    }
+    setActionLoading(true);
+    setActionError('');
+    setActionSuccess('');
+    try {
+      await leaveApi.processApproval(id, action, remarks.trim() || undefined);
+      setActionSuccess(`Leave ${action} successfully.`);
+      setRemarks('');
+      setShowRejectForm(false);
+      // Reload the leave to show updated status
+      await fetchLeave();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setActionError(msg || `Failed to ${action === 'approved' ? 'approve' : 'reject'} leave.`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ── Derived visibility ────────────────────────────────────────────
+  const role = user?.role || '';
+
+  // Can download PDF
   const isApprovedOrCompleted = leave?.status === 'approved' || leave?.status === 'completed';
-  const allowedRoles = ['student', 'guard', 'warden', 'chief_warden', 'hod', 'admin'];
-  const canDownloadPDF = isApprovedOrCompleted && allowedRoles.includes(user?.role || '');
+  const allowedPdfRoles = ['student', 'guard', 'warden', 'chief_warden', 'hod', 'admin'];
+  const canDownloadPDF = isApprovedOrCompleted && allowedPdfRoles.includes(role);
+
+  // Can approve/reject: check if this role needs to act at the current stage
+  const pendingStatuses = ['pending_parent', 'pending_warden', 'pending_chief_warden', 'pending_hod'];
+  const isPending = pendingStatuses.includes(leave?.status || '');
+
+  let canApprove = false;
+  if (isPending && leave) {
+    if (role === 'admin' || role === 'vice_chancellor') {
+      canApprove = true;
+    } else {
+      const requiredStatus = APPROVER_REQUIRED_STATUS[role];
+      canApprove = !!requiredStatus && leave.status === requiredStatus;
+    }
+  }
 
   const statusInfo = leave ? (STATUS_CONFIG[leave.status] ?? STATUS_CONFIG['draft']) : null;
+
+  // ── Workflow progress tracker ─────────────────────────────────────
+  /** Determine the state of each workflow stage based on leave status + approvals */
+  function getStageState(stage: typeof WORKFLOW_STAGES[0]): 'done' | 'current' | 'rejected' | 'pending' {
+    if (!leave) return 'pending';
+    // Check approvals array for a match on this role
+    const approval = leave.approvals?.find(a => a.role === stage.role);
+    if (approval) {
+      return approval.action === 'rejected' ? 'rejected' : 'done';
+    }
+    // Current stage
+    if (leave.status === stage.status) return 'current';
+    // If fully approved/completed/rejected — stages past the rejection point are pending
+    return 'pending';
+  }
 
   if (isLoading) {
     return (
@@ -202,6 +284,156 @@ export function LeaveDetailPage() {
       )}
 
       <div className="leave-detail__body">
+
+        {/* ── Workflow Progress Tracker ────────────────────────── */}
+        <div className="leave-detail__card">
+          <h2 className="leave-detail__card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            </svg>
+            Approval Progress
+          </h2>
+          <div className="leave-detail__workflow">
+            {WORKFLOW_STAGES.map((stage, idx) => {
+              const state = getStageState(stage);
+              const approval = leave.approvals?.find(a => a.role === stage.role);
+              return (
+                <div key={stage.role} className={`leave-detail__wf-step leave-detail__wf-step--${state}`}>
+                  {/* Connector line (not on last) */}
+                  {idx < WORKFLOW_STAGES.length - 1 && (
+                    <div className={`leave-detail__wf-connector leave-detail__wf-connector--${state === 'done' ? 'done' : 'pending'}`} />
+                  )}
+                  {/* Circle */}
+                  <div className="leave-detail__wf-circle">
+                    {state === 'done' && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                    )}
+                    {state === 'rejected' && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                    )}
+                    {state === 'current' && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="4" fill="currentColor" /></svg>
+                    )}
+                    {state === 'pending' && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4" /></svg>
+                    )}
+                  </div>
+                  {/* Label + info */}
+                  <div className="leave-detail__wf-info">
+                    <span className="leave-detail__wf-role">{stage.label}</span>
+                    {approval ? (
+                      <>
+                        <span className={`leave-detail__wf-status leave-detail__wf-status--${approval.action === 'rejected' ? 'reject' : 'approve'}`}>
+                          {approval.action === 'rejected' ? 'Rejected' : 'Approved'}
+                        </span>
+                        {approval.approverId?.name && (
+                          <span className="leave-detail__wf-by">by {approval.approverId.name}</span>
+                        )}
+                        {approval.remarks && (
+                          <span className="leave-detail__wf-remarks">"{approval.remarks}"</span>
+                        )}
+                        {approval.actionDate && (
+                          <span className="leave-detail__wf-date">{formatDateTime(approval.actionDate)}</span>
+                        )}
+                      </>
+                    ) : (
+                      <span className={`leave-detail__wf-status leave-detail__wf-status--${state === 'current' ? 'current' : 'pending'}`}>
+                        {state === 'current' ? 'Awaiting' : 'Pending'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Approve / Reject Action Panel ───────────────────── */}
+        {canApprove && (
+          <div className="leave-detail__action-panel">
+            <div className="leave-detail__action-panel-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <h2 className="leave-detail__action-title">Your Approval Required</h2>
+                <p className="leave-detail__action-subtitle">
+                  This leave is awaiting your decision as <strong>{ROLE_LABELS[role] || role}</strong>.
+                </p>
+              </div>
+            </div>
+
+            {actionSuccess && (
+              <div className="leave-detail__action-success" role="status">{actionSuccess}</div>
+            )}
+            {actionError && (
+              <div className="leave-detail__action-error" role="alert">{actionError}</div>
+            )}
+
+            {/* Remarks textarea (always visible, required for rejection) */}
+            <div className="leave-detail__action-remarks">
+              <label htmlFor="approval-remarks" className="leave-detail__field-label">
+                Remarks / Comments <span className="leave-detail__action-optional">(optional for approval, required for rejection)</span>
+              </label>
+              <textarea
+                id="approval-remarks"
+                className="leave-detail__remarks-input"
+                value={remarks}
+                onChange={e => { setRemarks(e.target.value); setActionError(''); }}
+                placeholder="Add remarks or reason (e.g. approved for family emergency)…"
+                rows={3}
+                disabled={actionLoading}
+              />
+            </div>
+
+            <div className="leave-detail__action-btns">
+              <button
+                id="approve-leave-btn"
+                className="leave-detail__btn-approve"
+                onClick={() => handleApprovalAction('approved')}
+                disabled={actionLoading}
+                aria-label="Approve this leave request"
+              >
+                {actionLoading ? (
+                  <><div className="leave-detail__btn-spinner" /> Processing…</>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Approve Leave
+                  </>
+                )}
+              </button>
+
+              <button
+                id="reject-leave-btn"
+                className="leave-detail__btn-reject"
+                onClick={() => {
+                  if (!showRejectForm) {
+                    setShowRejectForm(true);
+                    setActionError('');
+                  } else {
+                    handleApprovalAction('rejected');
+                  }
+                }}
+                disabled={actionLoading}
+                aria-label="Reject this leave request"
+              >
+                {actionLoading ? (
+                  <><div className="leave-detail__btn-spinner leave-detail__btn-spinner--red" /> Processing…</>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                    {showRejectForm ? 'Confirm Rejection' : 'Reject Leave'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ── Student Info ──────────────────────────────────────── */}
         <div className="leave-detail__card">
@@ -300,18 +532,17 @@ export function LeaveDetailPage() {
           </div>
         )}
 
-        {/* ── Approval Timeline ─────────────────────────────────── */}
+        {/* ── Detailed Approval Timeline ─────────────────────────── */}
         {leave.approvals && leave.approvals.length > 0 && (
           <div className="leave-detail__card">
             <h2 className="leave-detail__card-title">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
               </svg>
-              Approval Timeline
+              Approval History
             </h2>
             <div className="leave-detail__timeline">
               {leave.approvals.map((approval, i) => {
-                // Populated structure: { approverId: { name, email, role }, role, action: 'approved'|'rejected', remarks, actionDate }
                 const isApproved = approval.action === 'approved';
                 const isRejected = approval.action === 'rejected';
 
