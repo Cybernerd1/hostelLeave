@@ -4,30 +4,39 @@
 
 /* ─── CSS Custom Properties ─────────────────────────────────────── */
 :root {
-  /* Primary — Indigo */
-  --color-primary-50: #eef2ff;
-  --color-primary-100: #e0e7ff;
-  --color-primary-200: #c7d2fe;
-  --color-primary-300: #a5b4fc;
-  --color-primary-400: #818cf8;
-  --color-primary-500: #6366f1;
-  --color-primary-600: #4f46e5;
-  --color-primary-700: #4338ca;
-  --color-primary-800: #3730a3;
-  --color-primary-900: #312e81;
+  /* Primary — Institutional Ink (AKGEC portal action color).
+     Deep charcoal pairs with the AKGEC yellow accent used sparingly
+     for markers, selection and active states (see --color-accent-*). */
+  --color-primary-50: #f5f4f0;
+  --color-primary-100: #e9e8e2;
+  --color-primary-200: #d6d4cc;
+  --color-primary-300: #b5b2a6;
+  --color-primary-400: #8a877c;
+  --color-primary-500: #5f5c53;
+  --color-primary-600: #26272b;
+  --color-primary-700: #1d1e22;
+  --color-primary-800: #17181c;
+  --color-primary-900: #111214;
 
-  /* Neutral — Slate */
+  /* Accent — AKGEC institutional yellow (from the official logo mark) */
+  --color-accent-300: #fdf7b2;
+  --color-accent-400: #f9ec55;
+  --color-accent-500: #f5e100;
+  --color-accent-600: #d8ca00;
+  --color-accent-700: #a89b00;
+
+  /* Neutral — Warm Stone */
   --color-neutral-0: #ffffff;
-  --color-neutral-50: #f8fafc;
-  --color-neutral-100: #f1f5f9;
-  --color-neutral-200: #e2e8f0;
-  --color-neutral-300: #cbd5e1;
-  --color-neutral-400: #94a3b8;
-  --color-neutral-500: #64748b;
-  --color-neutral-600: #475569;
-  --color-neutral-700: #334155;
-  --color-neutral-800: #1e293b;
-  --color-neutral-900: #0f172a;
+  --color-neutral-50: #faf8f3;
+  --color-neutral-100: #f2efe6;
+  --color-neutral-200: #e4e0d3;
+  --color-neutral-300: #cdc8b8;
+  --color-neutral-400: #a3a094;
+  --color-neutral-500: #7b7869;
+  --color-neutral-600: #5c594e;
+  --color-neutral-700: #44423b;
+  --color-neutral-800: #2d2c27;
+  --color-neutral-900: #1e1d1a;
 
   /* Semantic */
   --color-success-50: #f0fdf4;
@@ -55,25 +64,26 @@
   --color-info-700: #1d4ed8;
 
   /* Surfaces */
-  --surface-primary: var(--color-neutral-0);
-  --surface-secondary: var(--color-neutral-50);
-  --surface-tertiary: var(--color-neutral-100);
-  --surface-overlay: rgba(15, 23, 42, 0.4);
+  --surface-primary: #fffefb;
+  --surface-secondary: #f4f1e8;
+  --surface-tertiary: #ece8db;
+  --surface-overlay: rgba(24, 24, 20, 0.45);
 
   /* Text */
-  --text-primary: var(--color-neutral-900);
-  --text-secondary: var(--color-neutral-600);
-  --text-tertiary: var(--color-neutral-400);
-  --text-inverse: var(--color-neutral-0);
-  --text-accent: var(--color-primary-600);
+  --text-primary: #1e1d1a;
+  --text-secondary: #5c594e;
+  --text-tertiary: #8b8778;
+  --text-inverse: #fffefb;
+  --text-accent: #26272b;
 
   /* Border */
-  --border-primary: var(--color-neutral-200);
-  --border-secondary: var(--color-neutral-100);
-  --border-focus: var(--color-primary-500);
+  --border-primary: #e0dccd;
+  --border-secondary: #eae7da;
+  --border-focus: #26272b;
 
   /* Typography */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-display: 'Fraunces', Georgia, 'Times New Roman', serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.8125rem;
   --font-size-base: 0.875rem;
@@ -116,13 +126,13 @@
   --radius-2xl: 1.5rem;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
-  --shadow-focus: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  /* Shadows — warm, restrained */
+  --shadow-xs: 0 1px 2px rgba(30, 29, 26, 0.05);
+  --shadow-sm: 0 1px 3px rgba(30, 29, 26, 0.07), 0 1px 2px rgba(30, 29, 26, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(30, 29, 26, 0.08), 0 2px 4px -1px rgba(30, 29, 26, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(30, 29, 26, 0.09), 0 4px 6px -2px rgba(30, 29, 26, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(30, 29, 26, 0.09), 0 10px 10px -5px rgba(30, 29, 26, 0.04);
+  --shadow-focus: 0 0 0 3px rgba(38, 39, 43, 0.18);
 
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -244,8 +254,8 @@ h5 { font-size: var(--font-size-md); }
 
 /* ─── Selection ─────────────────────────────────────────────────── */
 ::selection {
-  background-color: var(--color-primary-100);
-  color: var(--color-primary-900);
+  background-color: var(--color-accent-400);
+  color: var(--color-primary-800);
 }
 
 /* ─── Utilities ─────────────────────────────────────────────────── */

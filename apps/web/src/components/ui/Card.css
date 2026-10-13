@@ -1,7 +1,7 @@
 .card {
   background-color: var(--surface-primary);
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-base);
+  border-radius: 8px;
+  transition: box-shadow var(--transition-base), border-color var(--transition-base);
 }
 
 .card--default {
@@ -23,8 +23,8 @@
 .card--pad-lg { padding: var(--space-8); }
 
 .card--hoverable:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-primary);
 }
 
 .card__header {

@@ -32,19 +32,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Brand */}
         <div className="sidebar__brand">
           <div className="sidebar__logo">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <rect width="32" height="32" rx="8" fill="var(--color-primary-600)" />
-              <path
-                d="M8 22V12L16 7L24 12V22L16 27L8 22Z"
-                stroke="white"
-                strokeWidth="1.5"
-                fill="none"
-              />
-              <path d="M16 17V27M8 12L16 17L24 12" stroke="white" strokeWidth="1.5" />
-            </svg>
+            <img src="/images/campus/akgec-logo.png" alt="AKGEC" width="32" height="32" />
           </div>
           <div className="sidebar__brand-text">
-            <span className="sidebar__brand-name">HostelLeave</span>
+            <span className="sidebar__brand-name">Hostel Leave Portal</span>
             <span className="sidebar__brand-role">{getRoleLabel(user.role)}</span>
           </div>
         </div>
