@@ -44,6 +44,7 @@ import { ReportsPage } from '@/pages/shared/ReportsPage';
 // Guard pages
 import { QRScanPage } from '@/pages/guard/QRScanPage';
 import { GateLogPage } from '@/pages/guard/GateLogPage';
+import { GuardVerifyPage } from '@/pages/guard/GuardVerifyPage';
 
 import { StudentsListPage } from '@/pages/admin/StudentsListPage';
 import { StudentDetailPage } from '@/pages/admin/StudentDetailPage';
@@ -69,6 +70,9 @@ export default function App() {
 
           {/* ─── Standalone ──────────────────────────────────────────── */}
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
+
+          {/* ─── Public QR verification (no auth) ───────────────────── */}
+          <Route path="/verify/:leaveId" element={<GuardVerifyPage />} />
 
           {/* ─── Student Routes ──────────────────────────────────────── */}
           <Route element={<ProtectedRoute allowedRoles={[UserRole.STUDENT]} />}>

@@ -15,41 +15,37 @@ import { LeaveRequest, type ILeaveRequestDocument } from '../../models/leaveRequ
 import { LeaveStatus } from '@hostel/shared-types';
 import { generateRandomString } from '@hostel/shared-utils';
 
+const QR_TOKEN_LENGTH = 32;
+
+/**
+ * Get a plain id string whether studentId is a raw ObjectId or a populated document.
+ * (Calling toString() on a populated Mongoose document dumps the whole document.)
+ */
+function getStudentIdString(studentId: unknown): string {
+  const maybeDoc = studentId as { _id?: { toString(): string } } | null;
+  if (maybeDoc && maybeDoc._id) {
+    return maybeDoc._id.toString();
+  }
+  return String(studentId);
+}
+
 export class QRService {
   /**
-   * Generate an encrypted QR code for an approved leave.
-   * Returns the QR token and expiry date.
+   * Generate a QR token and expiry for an approved leave.
+   * Returns the RAW short token (stored on the leave) and expiry date.
+   * The token is encrypted into the QR payload later, in generateQRDataURL.
    */
   async generateQR(
-    leaveRequest: ILeaveRequestDocument,
+    _leaveRequest: ILeaveRequestDocument,
   ): Promise<{ token: string; expiry: Date }> {
-    const token = generateRandomString(32);
+    const token = generateRandomString(QR_TOKEN_LENGTH);
     const expiry = addHours(new Date(), config.qr.expiryHours);
-
-    // Create QR payload
-    const payload = {
-      leaveId: leaveRequest.leaveId,
-      leaveRequestId: leaveRequest._id.toString(),
-      studentId: leaveRequest.studentId.toString(),
-      token,
-      expiry: expiry.toISOString(),
-    };
-
-    // Encrypt the payload
-    const encrypted = CryptoJS.AES.encrypt(
-      JSON.stringify(payload),
-      config.qr.secret,
-    ).toString();
-
-    // Store token on the leave request
-    leaveRequest.qrToken = token;
-    leaveRequest.qrExpiry = expiry;
-
-    return { token: encrypted, expiry };
+    return { token, expiry };
   }
 
   /**
    * Generate QR code as a data URL (base64 PNG).
+   * The QR encodes a public URL that the guard's phone browser can open.
    */
   async generateQRDataURL(leaveRequestId: string): Promise<string> {
     const leaveRequest = await LeaveRequest.findById(leaveRequestId);
@@ -61,31 +57,21 @@ export class QRService {
       throw AppError.badRequest('QR code can only be generated for approved leaves');
     }
 
-    if (!leaveRequest.qrToken) {
-      // Generate new QR if not exists
+    // Generate a new token if missing or malformed
+    if (!leaveRequest.qrToken || leaveRequest.qrToken.length !== QR_TOKEN_LENGTH || !leaveRequest.qrExpiry) {
       const qrData = await this.generateQR(leaveRequest);
       leaveRequest.qrToken = qrData.token;
       leaveRequest.qrExpiry = qrData.expiry;
       await leaveRequest.save();
     }
 
-    // Create payload and encrypt
-    const payload = {
-      leaveId: leaveRequest.leaveId,
-      leaveRequestId: leaveRequest._id.toString(),
-      studentId: leaveRequest.studentId.toString(),
-      token: leaveRequest.qrToken,
-      expiry: leaveRequest.qrExpiry!.toISOString(),
-    };
-
-    const encrypted = CryptoJS.AES.encrypt(
-      JSON.stringify(payload),
-      config.qr.secret,
-    ).toString();
+    // Encode a public URL: guard scans QR → opens browser → sees leave status
+    const webBaseUrl = config.webBaseUrl || 'http://localhost:3000';
+    const verifyUrl = `${webBaseUrl}/verify/${leaveRequest.leaveId}`;
 
     // Generate QR image as data URL
-    const qrDataUrl = await QRCode.toDataURL(encrypted, {
-      errorCorrectionLevel: 'H',
+    const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
+      errorCorrectionLevel: 'M',
       type: 'image/png',
       width: 300,
       margin: 2,

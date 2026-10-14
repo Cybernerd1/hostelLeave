@@ -15,7 +15,11 @@ import { UserRole } from '@hostel/shared-types';
 
 const router = Router();
 
-// All routes require authentication
+// ─── PUBLIC routes (no auth required) ───────────────────────────────────────
+// Guard QR verification page — returns sanitized leave info + gate status
+router.get('/public/:leaveId', leaveController.getPublicLeaveInfo);
+
+// ─── Authenticated routes ────────────────────────────────────────────────────
 router.use(authenticate);
 
 // Student routes

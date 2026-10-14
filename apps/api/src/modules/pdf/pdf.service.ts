@@ -17,8 +17,6 @@
 
 import PDFDocument from 'pdfkit';
 import { LeaveRequest } from '../../models/leaveRequest.model';
-import { LeaveApproval } from '../../models/leaveApproval.model';
-import { Student } from '../../models/student.model';
 import { AppError } from '../../utils/AppError';
 import { LeaveStatus } from '@hostel/shared-types';
 import { formatDate, calculateDays, LEAVE_TYPE_CONFIG } from '@hostel/shared-utils';
@@ -119,25 +117,44 @@ export class PdfService {
     const box = (x: number, yPos: number, w: number, h: number) =>
       doc.strokeColor('#000').lineWidth(0.5).rect(x, yPos, w, h).stroke();
 
+    /** Start a new page if fewer than `needed` points remain above the bottom margin. */
+    const ensureSpace = (needed: number) => {
+      if (y + needed > doc.page.height - PAGE_MARGIN) {
+        doc.addPage();
+        y = PAGE_MARGIN;
+      }
+    };
+
+    /**
+     * Draw "label ........ value" inside a cell.
+     * `width` is the full width of the cell, `xOffset` is where the cell starts
+     * (relative to the left margin) and `labelW` is the width reserved for the label.
+     */
     const labelVal = (
       label: string,
       value: string,
       xOffset = 0,
       yPos?: number,
       width = CONTENT_W,
+      labelW = COL_LABEL,
     ) => {
       const cy = yPos ?? y;
+      // Value width must never be zero/negative — pdfkit's line wrapper can loop forever on that.
+      const valueW = Math.max(width - labelW - 4, 20);
+
       doc
         .font('Helvetica-Bold').fontSize(8.5)
-        .text(label, PAGE_MARGIN + xOffset, cy, { width: COL_LABEL, lineBreak: false });
-      doc
-        .font('Helvetica').fontSize(9)
-        .text(value, PAGE_MARGIN + xOffset + COL_LABEL, cy, {
-          width: width - COL_LABEL - xOffset,
-          lineBreak: false,
-        });
+        .text(label, PAGE_MARGIN + xOffset, cy, { width: labelW, lineBreak: false });
+      if (value) {
+        doc
+          .font('Helvetica').fontSize(9)
+          .text(value, PAGE_MARGIN + xOffset + labelW, cy, {
+            width: valueW,
+            lineBreak: false,
+          });
+      }
       line(
-        PAGE_MARGIN + xOffset + COL_LABEL,
+        PAGE_MARGIN + xOffset + labelW,
         cy + LINE_H - 2,
         PAGE_MARGIN + xOffset + width,
         cy + LINE_H - 2,
@@ -148,23 +165,43 @@ export class PdfService {
 
     /* ─── HEADER ──────────────────────────────────────────────── */
     // Outer border
-    box(PAGE_MARGIN, y, CONTENT_W, 56);
+    box(PAGE_MARGIN, y, CONTENT_W, 72);
 
-    // Title block
-    doc
-      .font('Helvetica-Bold').fontSize(13)
-      .text('HOSTEL LEAVE APPLICATION FORM', PAGE_MARGIN, y + 8, { align: 'center', width: CONTENT_W });
+    // Left: AKGEC logo box (placeholder square)
+    const logoSize = 56;
+    const logoX = PAGE_MARGIN + 8;
+    const logoY = y + 8;
+    box(logoX, logoY, logoSize, logoSize);
+    doc.font('Helvetica-Bold').fontSize(7).fillColor('#000')
+      .text('AKGEC', logoX + 2, logoY + 20, { width: logoSize - 4, align: 'center', lineBreak: false });
 
-    doc
-      .font('Helvetica').fontSize(8.5)
-      .text('Hostel Leave Management System', PAGE_MARGIN, y + 28, { align: 'center', width: CONTENT_W });
+    // Right: college name + form title
+    const titleX = PAGE_MARGIN + logoSize + 20;
+    const titleW = CONTENT_W - logoSize - 28;
 
-    doc
-      .font('Helvetica').fontSize(8)
-      .text(`Application No.: ${leaveRequest.leaveId}   |   Status: APPROVED ✓   |   Date: ${formatDate(new Date())}`,
-        PAGE_MARGIN, y + 44, { align: 'center', width: CONTENT_W });
+    doc.font('Helvetica-Bold').fontSize(13).fillColor('#000')
+      .text('AJAY KUMAR GARG ENGINEERING COLLEGE, GHAZIABAD',
+        titleX, y + 12, { width: titleW, align: 'center' });
 
-    y += 64;
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#000')
+      .text('HOSTEL LEAVE APPLICATION FORM',
+        titleX, y + 34, { width: titleW, align: 'center' });
+
+    // Underline the form title
+    const titleMid = y + 34 + 13;
+    doc.strokeColor('#000').lineWidth(0.8)
+      .moveTo(titleX, titleMid)
+      .lineTo(titleX + titleW, titleMid)
+      .stroke();
+
+    // Leave ID + status info below the title
+    // (no "✓" here: it is not in the built-in Helvetica font and renders as garbage)
+    doc.font('Helvetica').fontSize(7.5).fillColor('#444')
+      .text(`Application No.: ${leaveRequest.leaveId}   |   Status: APPROVED   |   Date: ${formatDate(new Date())}`,
+        titleX, y + 56, { width: titleW, align: 'center', lineBreak: false });
+
+    y += 80;
+
 
     /* ─── SECTION 1–3: STUDENT DETAILS ───────────────────────── */
     hLine(y, 1);
@@ -193,9 +230,10 @@ export class PdfService {
     y += 16;
 
     const colW3 = CONTENT_W / 3;
-    labelVal('4.  Period of Leave', `${duration} Day(s)`, 0, y, colW3 - 2);
-    labelVal('    From Date', formatDate(leaveRequest.fromDate), colW3 + 1, y - LINE_H - 4, colW3 - 2);
-    labelVal('    To Date', formatDate(leaveRequest.toDate), colW3 * 2 + 2, y - LINE_H - 4, colW3 - 2);
+    const label3 = 80;
+    labelVal('4.  Period of Leave', `${duration} Day(s)`, 0, y, colW3 - 2, label3);
+    labelVal('    From Date', formatDate(leaveRequest.fromDate), colW3 + 1, y - LINE_H - 4, colW3 - 2, label3);
+    labelVal('    To Date', formatDate(leaveRequest.toDate), colW3 * 2 + 2, y - LINE_H - 4, colW3 - 2, label3);
 
     labelVal('    Leave Type', leaveTypeLabel, 0, y, CONTENT_W);
 
@@ -251,13 +289,15 @@ export class PdfService {
 
     /* ─── APPROVALS TABLE ─────────────────────────────────────── */
     if (approvals && approvals.length > 0) {
+      const appColW = CONTENT_W / 4;
+      const appRowH = 22;
+      ensureSpace(14 + appRowH * (approvals.length + 1) + 6);
+
       hLine(y, 1);
       doc.font('Helvetica-Bold').fontSize(8).fillColor('#333')
         .text('APPROVAL TRAIL', PAGE_MARGIN, y + 3);
       y += 14;
 
-      const appColW = CONTENT_W / 4;
-      const appRowH = 22;
       const headers = ['Approver', 'Role', 'Decision', 'Date'];
 
       // Header row
@@ -290,6 +330,7 @@ export class PdfService {
     }
 
     /* ─── SIGNATURE BLOCK ─────────────────────────────────────── */
+    ensureSpace(46);
     hLine(y, 1);
     y += 10;
     const sigW = CONTENT_W / 2 - 8;
@@ -304,6 +345,10 @@ export class PdfService {
     hLine(y);
 
     /* ─── QR CODE ─────────────────────────────────────────────── */
+    // The QR block (title + caption + 140pt image) must never be cut off by the page edge.
+    const qrSize = 140;
+    ensureSpace(10 + 14 + 14 + qrSize + 10);
+
     y += 10;
     doc.font('Helvetica-Bold').fontSize(9).fillColor('#000')
       .text('GATE VERIFICATION QR CODE', PAGE_MARGIN, y, { align: 'center', width: CONTENT_W });
@@ -316,16 +361,12 @@ export class PdfService {
 
     if (qrDataUrl) {
       const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
-      const qrSize = 140;
       const qrX = PAGE_MARGIN + (CONTENT_W - qrSize) / 2;
       doc.image(qrBuffer, qrX, y, { width: qrSize, height: qrSize });
       y += qrSize + 10;
     }
 
     /* ─── FOOTER NOTICES ──────────────────────────────────────── */
-    hLine(y);
-    y += 6;
-
     const notices = [
       '* Leave from the hostel does not mean leave from college/classes.',
       '* Leave from the hostel on holidays may be granted by the Warden.',
@@ -333,6 +374,10 @@ export class PdfService {
       '* Leave beyond 3 working days may be granted by the Director General on recommendation of the Dean Hostel.',
       `* This is a digitally approved document. Generated on: ${formatDate(new Date())}`,
     ];
+
+    ensureSpace(6 + notices.length * 11);
+    hLine(y);
+    y += 6;
 
     doc.font('Helvetica').fontSize(7).fillColor('#444');
     notices.forEach((n) => {

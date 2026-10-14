@@ -56,6 +56,57 @@ export const getLeaveById = asyncHandler(async (req: Request, res: Response) => 
   sendSuccess(res, leaveRequest, 'Leave details retrieved');
 });
 
+/** GET /api/v1/leaves/public/:leaveId - Public leave info for guard QR verification (no auth) */
+export const getPublicLeaveInfo = asyncHandler(async (req: Request, res: Response) => {
+  const { leaveId } = req.params;
+
+  // Look up by leaveId (human-readable) string OR by MongoDB _id
+  const { LeaveRequest } = await import('../../models/leaveRequest.model');
+  const leaveRequest = await LeaveRequest.findOne(
+    leaveId.match(/^[a-f\d]{24}$/i) ? { _id: leaveId } : { leaveId },
+  )
+    .populate({
+      path: 'studentId',
+      select: 'name rollNumber phone year semester',
+      populate: [
+        { path: 'departmentId', select: 'name code' },
+        { path: 'courseId', select: 'name code' },
+        { path: 'hostelId', select: 'name' },
+        { path: 'roomId', select: 'roomNumber' },
+      ],
+    })
+    .populate({
+      path: 'approvals',
+      populate: { path: 'approverId', select: 'name role' },
+    })
+    .lean();
+
+  if (!leaveRequest) {
+    return res.status(404).json({ success: false, message: 'Leave request not found' });
+  }
+
+  // Return a sanitized view safe for public display
+  const publicData = {
+    _id: leaveRequest._id,
+    leaveId: leaveRequest.leaveId,
+    status: leaveRequest.status,
+    leaveType: leaveRequest.leaveType,
+    fromDate: leaveRequest.fromDate,
+    toDate: leaveRequest.toDate,
+    destination: leaveRequest.destination,
+    reason: leaveRequest.reason,
+    exitTime: leaveRequest.exitTime,
+    entryTime: leaveRequest.entryTime,
+    createdAt: leaveRequest.createdAt,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    student: leaveRequest.studentId as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    approvals: leaveRequest.approvals as any,
+  };
+
+  sendSuccess(res, publicData, 'Leave details retrieved');
+});
+
 /** GET /api/v1/leaves/my - Get student's own leaves */
 export const getMyLeaves = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;

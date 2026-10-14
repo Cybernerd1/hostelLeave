@@ -49,6 +49,8 @@ export interface LeaveRequest {
   status: string;
   documents?: string[];
   approvals?: LeaveApprovalEntry[];
+  exitTime?: string;
+  entryTime?: string;
   createdAt: string;
   updatedAt: string;
 }

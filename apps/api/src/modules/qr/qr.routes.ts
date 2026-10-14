@@ -14,7 +14,4 @@ router.use(authenticate);
 // Get QR code image for a leave request
 router.get('/:id/qr', qrController.getQRCode);
 
-// Download leave pass PDF
-router.get('/:id/pdf', qrController.downloadPDF);
-
 export default router;
