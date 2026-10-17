@@ -28,6 +28,7 @@ import { WardenDashboard } from '@/pages/warden/WardenDashboard';
 import { ChiefWardenManagePage } from '@/pages/warden/ChiefWardenManagePage';
 import { GuardDashboard } from '@/pages/guard/GuardDashboard';
 import { AdminDashboard } from '@/pages/admin/AdminDashboard';
+import { DirectorDashboard } from '@/pages/warden/DirectorDashboard';
 
 // Student pages
 import { MyLeavesPage } from '@/pages/student/MyLeavesPage';
@@ -113,15 +114,15 @@ export default function App() {
           {/* ─── Chief Warden Routes ─────────────────────────────────── */}
           <Route element={<ProtectedRoute allowedRoles={[UserRole.CHIEF_WARDEN]} />}>
             <Route element={<DashboardLayout />}>
-              <Route path="/chief-warden/dashboard"     element={<WardenDashboard />} />
-              <Route path="/chief-warden/approvals"     element={<PendingApprovalsPage />} />
-              <Route path="/chief-warden/leaves"        element={<AllLeavesPage />} />
-              <Route path="/chief-warden/leaves/:id"    element={<LeaveDetailPage />} />
-              <Route path="/chief-warden/students"      element={<StudentsListPage />} />
-              <Route path="/chief-warden/manage"        element={<ChiefWardenManagePage />} />
-              <Route path="/chief-warden/reports"       element={<ReportsPage />} />
+              <Route path="/chief-warden/dashboard" element={<WardenDashboard />} />
+              <Route path="/chief-warden/approvals" element={<PendingApprovalsPage />} />
+              <Route path="/chief-warden/leaves" element={<AllLeavesPage />} />
+              <Route path="/chief-warden/leaves/:id" element={<LeaveDetailPage />} />
+              <Route path="/chief-warden/students" element={<StudentsListPage />} />
+              <Route path="/chief-warden/manage" element={<ChiefWardenManagePage />} />
+              <Route path="/chief-warden/reports" element={<ReportsPage />} />
               <Route path="/chief-warden/notifications" element={<NotificationsPage />} />
-              <Route path="/chief-warden/profile"       element={<ProfilePage />} />
+              <Route path="/chief-warden/profile" element={<ProfilePage />} />
             </Route>
           </Route>
 
@@ -139,11 +140,28 @@ export default function App() {
             </Route>
           </Route>
 
+
+          {/* ─── Director Routes ───────────────────────────────────── */}
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.DIRECTOR]} />
+            }
+          >
+            <Route element={<DashboardLayout />}>
+              <Route path="/director/dashboard" element={<DirectorDashboard />} />
+              <Route path="/director/leaves" element={<AllLeavesPage />} />
+              <Route path="/director/leaves/:id" element={<LeaveDetailPage />} />
+              <Route path="/director/reports" element={<ReportsPage />} />
+              <Route path="/director/notifications" element={<NotificationsPage />} />
+              <Route path="/director/profile" element={<ProfilePage />} />
+            </Route>
+          </Route>
           {/* ─── Vice Chancellor Routes ──────────────────────────────── */}
           <Route element={<ProtectedRoute allowedRoles={[UserRole.VICE_CHANCELLOR]} />}>
             <Route element={<DashboardLayout />}>
-              <Route path="/vc/dashboard" element={<WardenDashboard />} />
+              <Route path="/vc/dashboard" element={<DirectorDashboard />} />
               <Route path="/vc/leaves" element={<AllLeavesPage />} />
+              <Route path="/vc/leaves/:id" element={<LeaveDetailPage />} />
               <Route path="/vc/reports" element={<ReportsPage />} />
               <Route path="/vc/notifications" element={<NotificationsPage />} />
               <Route path="/vc/profile" element={<ProfilePage />} />

@@ -9,6 +9,11 @@ import { leaveService } from './leave.service';
 import { sendSuccess, sendPaginated, sendCreated } from '../../utils/response.util';
 import { pdfService } from '../pdf/pdf.service';
 import { cloudinaryService } from '../../utils/cloudinary.service';
+import { UserRole } from '@hostel/shared-types';
+import { Hostel } from '../../models/hostel.model';
+import { Department } from '../../models/department.model';
+import { Student } from '../../models/student.model';
+
 
 /** POST /api/v1/leaves - Apply for leave */
 export const applyLeave = asyncHandler(async (req: Request, res: Response) => {
@@ -157,40 +162,80 @@ export const getAllLeaves = asyncHandler(async (req: Request, res: Response) => 
 });
 
 /** GET /api/v1/leaves/stats - Get leave statistics (role-scoped) */
-export const getLeaveStats = asyncHandler(async (req: Request, res: Response) => {
-  const { userId, role } = req.user!;
-  let filter: Record<string, unknown> = {};
 
-  if (role === 'warden') {
-    const { Hostel } = await import('../../models/hostel.model');
-    const { Student } = await import('../../models/student.model');
-    const hostel = await Hostel.findOne({ wardenId: userId });
-    if (hostel) {
-      const studentIds = await Student.find({ hostelId: hostel._id }).distinct('_id');
-      filter = { studentId: { $in: studentIds } };
-    }
-  } else if (role === 'chief_warden') {
-    const { Hostel } = await import('../../models/hostel.model');
-    const { Student } = await import('../../models/student.model');
-    const hostel = await Hostel.findOne({ chiefWardenId: userId });
-    if (hostel) {
-      const studentIds = await Student.find({ hostelId: hostel._id }).distinct('_id');
-      filter = { studentId: { $in: studentIds } };
-    }
-  } else if (role === 'hod') {
-    const { Department } = await import('../../models/department.model');
-    const { Student } = await import('../../models/student.model');
-    const dept = await Department.findOne({ hodId: userId });
-    if (dept) {
-      const studentIds = await Student.find({ departmentId: dept._id }).distinct('_id');
-      filter = { studentId: { $in: studentIds } };
-    }
-  }
+/** GET /api/v1/leaves/stats - Get leave statistics (role-scoped) */
 
-  const stats = await leaveService.getLeaveStats(filter);
+/** GET /api/v1/leaves/stats - Get role-scoped leave statistics */
+export const getLeaveStats = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId, role } = req.user!;
 
-  sendSuccess(res, stats, 'Leave statistics retrieved');
-});
+    let filter: Record<string, unknown>;
+
+    switch (role) {
+      case UserRole.ADMIN:
+      case UserRole.DIRECTOR:
+        // Institution-wide statistics.
+        filter = {};
+        break;
+
+      case UserRole.WARDEN:
+      case UserRole.CHIEF_WARDEN: {
+        const hostel = await Hostel.findOne(
+          role === UserRole.WARDEN
+            ? { wardenId: userId }
+            : { chiefWardenId: userId },
+        );
+
+        if (!hostel) {
+          filter = { studentId: { $in: [] } };
+          break;
+        }
+
+        const studentIds = await Student.find({
+          hostelId: hostel._id,
+        }).distinct('_id');
+
+        filter = { studentId: { $in: studentIds } };
+        break;
+      }
+
+      case UserRole.HOD: {
+        const department = await Department.findOne({
+          hodId: userId,
+        });
+
+        if (!department) {
+          filter = { studentId: { $in: [] } };
+          break;
+        }
+
+        const studentIds = await Student.find({
+          departmentId: department._id,
+        }).distinct('_id');
+
+        filter = { studentId: { $in: studentIds } };
+        break;
+      }
+
+      default:
+        return res.status(403).json({
+          success: false,
+          message: `Role "${role}" is not permitted to view leave statistics`,
+        });
+    }
+
+    const stats = await leaveService.getLeaveStats(filter);
+
+    return sendSuccess(
+      res,
+      stats,
+      'Leave statistics retrieved',
+    );
+  },
+);
+
+
 
 /** GET /api/v1/leaves/:id/pdf - Download approved leave pass as PDF */
 export const downloadLeavePDF = asyncHandler(async (req: Request, res: Response) => {
