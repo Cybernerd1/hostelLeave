@@ -20,7 +20,7 @@ const ROLE_BASE_PATH: Record<string, string> = {
   warden:          '/warden',
   chief_warden:    '/chief-warden',
   hod:             '/hod',
-  vice_chancellor: '/vc',
+  director:        '/vc',
   admin:           '/admin',
 };
 
@@ -28,7 +28,7 @@ const ROLE_NAME: Record<string, string> = {
   warden:          'Warden',
   chief_warden:    'Chief Warden',
   hod:             'Head of Department',
-  vice_chancellor: 'Vice Chancellor',
+  director:        'Director',
   admin:           'Admin',
 };
 

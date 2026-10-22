@@ -12,7 +12,7 @@ export enum UserRole {
   WARDEN = 'warden',
   CHIEF_WARDEN = 'chief_warden',
   HOD = 'hod',
-  VICE_CHANCELLOR = 'vice_chancellor',
+  DIRECTOR = 'director',
   GUARD = 'guard',
   ADMIN = 'admin',
 }

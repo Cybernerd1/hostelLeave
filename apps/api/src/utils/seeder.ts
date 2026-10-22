@@ -144,7 +144,7 @@ async function seed(): Promise<void> {
       { email: 'warden@demo.edu',      name: 'Dr. Meena Patel',  role: UserRole.WARDEN,          phone: '9876543212' },
       { email: 'chiefwarden@demo.edu', name: 'Dr. Vikram Singh', role: UserRole.CHIEF_WARDEN,    phone: '9876543213' },
       { email: 'hod@demo.edu',         name: 'Prof. Anita Rao',  role: UserRole.HOD,             phone: '9876543214' },
-      { email: 'vc@demo.edu',          name: 'Dr. Suresh Kumar', role: UserRole.VICE_CHANCELLOR, phone: '9876543215' },
+      { email: 'vc@demo.edu',          name: 'Dr. Suresh Kumar', role: UserRole.DIRECTOR,        phone: '9876543215' },
       { email: 'guard@demo.edu',       name: 'Ramesh Gupta',     role: UserRole.GUARD,           phone: '9876543216' },
       { email: 'admin@demo.edu',       name: 'Demo Admin',       role: UserRole.ADMIN,           phone: '9876543217' },
     ];

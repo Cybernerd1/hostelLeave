@@ -593,7 +593,7 @@ export class AdminService {
       filter.role = {
         $in: [
           UserRole.WARDEN, UserRole.CHIEF_WARDEN, UserRole.HOD,
-          UserRole.VICE_CHANCELLOR, UserRole.GUARD,
+          UserRole.DIRECTOR, UserRole.GUARD,
         ],
       };
     }

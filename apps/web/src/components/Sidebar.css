@@ -46,6 +46,13 @@
 
 .sidebar__logo {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar__logo img {
+  width: 34px;
+  height: 34px;
 }
 
 .sidebar__brand-text {
@@ -55,18 +62,22 @@
 }
 
 .sidebar__brand-name {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   color: var(--text-primary);
   line-height: var(--line-height-tight);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar__brand-role {
-  font-size: var(--font-size-xs);
+  font-size: 0.6875rem;
   color: var(--text-tertiary);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 /* ─── Navigation ────────────────────────────────────────────────── */
@@ -87,23 +98,23 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  border-radius: 6px;
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   text-decoration: none;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
   position: relative;
 }
 
 .sidebar__nav-link:hover {
   color: var(--text-primary);
-  background-color: var(--color-neutral-50);
+  background-color: var(--color-neutral-100);
 }
 
 .sidebar__nav-link--active {
-  color: var(--color-primary-700);
-  background-color: var(--color-primary-50);
+  color: var(--text-primary);
+  background-color: var(--color-neutral-100);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -114,7 +125,7 @@
   top: 6px;
   bottom: 6px;
   width: 3px;
-  background-color: var(--color-primary-600);
+  background-color: var(--color-accent-500);
   border-radius: var(--radius-full);
 }
 

@@ -18,13 +18,24 @@ import { AppError } from '../utils/AppError';
  * router.get('/admin/dashboard', authenticate, authorize(UserRole.ADMIN), controller);
  * router.get('/leaves', authenticate, authorize(UserRole.WARDEN, UserRole.CHIEF_WARDEN), controller);
  */
+
 export function authorize(...allowedRoles: UserRole[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
-      return next(AppError.unauthorized('Authentication required'));
+      return next(
+        AppError.unauthorized('Authentication required'),
+      );
     }
 
     if (!allowedRoles.includes(req.user.role)) {
+      console.error('[RBAC DENIED]', {
+        method: req.method,
+        path: req.originalUrl,
+        actualRole: req.user.role,
+        allowedRoles,
+        userId: req.user.userId,
+      });
+
       return next(
         AppError.forbidden(
           `Access denied. Required roles: ${allowedRoles.join(', ')}. Your role: ${req.user.role}`,

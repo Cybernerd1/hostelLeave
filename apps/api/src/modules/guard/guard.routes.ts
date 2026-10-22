@@ -36,10 +36,11 @@ router.post(
   guardController.markEntry,
 );
 
+// Unified checkout/entry action from QR scan page
 router.post(
   '/scan',
   authorize(UserRole.GUARD),
-  guardController.scanGate,
+  guardController.markCheckOut,
 );
 
 router.get(

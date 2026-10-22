@@ -9,6 +9,11 @@ import { leaveService } from './leave.service';
 import { sendSuccess, sendPaginated, sendCreated } from '../../utils/response.util';
 import { pdfService } from '../pdf/pdf.service';
 import { cloudinaryService } from '../../utils/cloudinary.service';
+import { UserRole } from '@hostel/shared-types';
+import { Hostel } from '../../models/hostel.model';
+import { Department } from '../../models/department.model';
+import { Student } from '../../models/student.model';
+
 
 /** POST /api/v1/leaves - Apply for leave */
 export const applyLeave = asyncHandler(async (req: Request, res: Response) => {
@@ -54,6 +59,57 @@ export const getLeaveById = asyncHandler(async (req: Request, res: Response) => 
   }
 
   sendSuccess(res, leaveRequest, 'Leave details retrieved');
+});
+
+/** GET /api/v1/leaves/public/:leaveId - Public leave info for guard QR verification (no auth) */
+export const getPublicLeaveInfo = asyncHandler(async (req: Request, res: Response) => {
+  const { leaveId } = req.params;
+
+  // Look up by leaveId (human-readable) string OR by MongoDB _id
+  const { LeaveRequest } = await import('../../models/leaveRequest.model');
+  const leaveRequest = await LeaveRequest.findOne(
+    leaveId.match(/^[a-f\d]{24}$/i) ? { _id: leaveId } : { leaveId },
+  )
+    .populate({
+      path: 'studentId',
+      select: 'name rollNumber phone year semester',
+      populate: [
+        { path: 'departmentId', select: 'name code' },
+        { path: 'courseId', select: 'name code' },
+        { path: 'hostelId', select: 'name' },
+        { path: 'roomId', select: 'roomNumber' },
+      ],
+    })
+    .populate({
+      path: 'approvals',
+      populate: { path: 'approverId', select: 'name role' },
+    })
+    .lean();
+
+  if (!leaveRequest) {
+    return res.status(404).json({ success: false, message: 'Leave request not found' });
+  }
+
+  // Return a sanitized view safe for public display
+  const publicData = {
+    _id: leaveRequest._id,
+    leaveId: leaveRequest.leaveId,
+    status: leaveRequest.status,
+    leaveType: leaveRequest.leaveType,
+    fromDate: leaveRequest.fromDate,
+    toDate: leaveRequest.toDate,
+    destination: leaveRequest.destination,
+    reason: leaveRequest.reason,
+    exitTime: leaveRequest.exitTime,
+    entryTime: leaveRequest.entryTime,
+    createdAt: leaveRequest.createdAt,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    student: leaveRequest.studentId as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    approvals: leaveRequest.approvals as any,
+  };
+
+  sendSuccess(res, publicData, 'Leave details retrieved');
 });
 
 /** GET /api/v1/leaves/my - Get student's own leaves */
@@ -105,41 +161,77 @@ export const getAllLeaves = asyncHandler(async (req: Request, res: Response) => 
   sendPaginated(res, result.data, result.pagination, 'Leaves retrieved');
 });
 
-/** GET /api/v1/leaves/stats - Get leave statistics (role-scoped) */
-export const getLeaveStats = asyncHandler(async (req: Request, res: Response) => {
-  const { userId, role } = req.user!;
-  let filter: Record<string, unknown> = {};
+/** GET /api/v1/leaves/stats - Get role-scoped leave statistics */
+export const getLeaveStats = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId, role } = req.user!;
 
-  if (role === 'warden') {
-    const { Hostel } = await import('../../models/hostel.model');
-    const { Student } = await import('../../models/student.model');
-    const hostel = await Hostel.findOne({ wardenId: userId });
-    if (hostel) {
-      const studentIds = await Student.find({ hostelId: hostel._id }).distinct('_id');
-      filter = { studentId: { $in: studentIds } };
-    }
-  } else if (role === 'chief_warden') {
-    const { Hostel } = await import('../../models/hostel.model');
-    const { Student } = await import('../../models/student.model');
-    const hostel = await Hostel.findOne({ chiefWardenId: userId });
-    if (hostel) {
-      const studentIds = await Student.find({ hostelId: hostel._id }).distinct('_id');
-      filter = { studentId: { $in: studentIds } };
-    }
-  } else if (role === 'hod') {
-    const { Department } = await import('../../models/department.model');
-    const { Student } = await import('../../models/student.model');
-    const dept = await Department.findOne({ hodId: userId });
-    if (dept) {
-      const studentIds = await Student.find({ departmentId: dept._id }).distinct('_id');
-      filter = { studentId: { $in: studentIds } };
-    }
-  }
+    let filter: Record<string, unknown>;
 
-  const stats = await leaveService.getLeaveStats(filter);
+    switch (role) {
+      case UserRole.ADMIN:
+      case UserRole.DIRECTOR:
+        // Institution-wide statistics.
+        filter = {};
+        break;
 
-  sendSuccess(res, stats, 'Leave statistics retrieved');
-});
+      case UserRole.WARDEN:
+      case UserRole.CHIEF_WARDEN: {
+        const hostel = await Hostel.findOne(
+          role === UserRole.WARDEN
+            ? { wardenId: userId }
+            : { chiefWardenId: userId },
+        );
+
+        if (!hostel) {
+          filter = { studentId: { $in: [] } };
+          break;
+        }
+
+        const studentIds = await Student.find({
+          hostelId: hostel._id,
+        }).distinct('_id');
+
+        filter = { studentId: { $in: studentIds } };
+        break;
+      }
+
+      case UserRole.HOD: {
+        const department = await Department.findOne({
+          hodId: userId,
+        });
+
+        if (!department) {
+          filter = { studentId: { $in: [] } };
+          break;
+        }
+
+        const studentIds = await Student.find({
+          departmentId: department._id,
+        }).distinct('_id');
+
+        filter = { studentId: { $in: studentIds } };
+        break;
+      }
+
+      default:
+        return res.status(403).json({
+          success: false,
+          message: `Role "${role}" is not permitted to view leave statistics`,
+        });
+    }
+
+    const stats = await leaveService.getLeaveStats(filter);
+
+    return sendSuccess(
+      res,
+      stats,
+      'Leave statistics retrieved',
+    );
+  },
+);
+
+
 
 /** GET /api/v1/leaves/:id/pdf - Download approved leave pass as PDF */
 export const downloadLeavePDF = asyncHandler(async (req: Request, res: Response) => {

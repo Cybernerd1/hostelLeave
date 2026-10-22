@@ -7,7 +7,7 @@ import '../shared/ApprovalsPage.css';
 
 const ROLE_COLORS: Record<string, string> = {
   warden: 'info', chief_warden: 'info', hod: 'pending', guard: 'neutral',
-  admin: 'rejected', vice_chancellor: 'approved',
+  admin: 'rejected', director: 'approved',
 };
 
 export function StaffPage() {
@@ -22,7 +22,7 @@ export function StaffPage() {
       .finally(() => setLoading(false));
   }, [roleFilter]);
 
-  const ROLE_OPTIONS = ['', 'warden', 'chief_warden', 'hod', 'guard', 'vice_chancellor', 'admin'];
+  const ROLE_OPTIONS = ['', 'warden', 'chief_warden', 'hod', 'guard', 'director', 'admin'];
 
   return (
     <div className="approvals-page animate-fade-in-up">

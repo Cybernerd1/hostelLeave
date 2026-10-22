@@ -21,7 +21,6 @@ import { LeaveApproval } from '../../models/leaveApproval.model';
 import { Student } from '../../models/student.model';
 import { Parent } from '../../models/parent.model';
 import { Hostel } from '../../models/hostel.model';
-import { Department } from '../../models/department.model';
 import { User } from '../../models/user.model';
 import { AppError } from '../../utils/AppError';
 import { logger } from '../../utils/logger';
@@ -32,6 +31,34 @@ import { qrService } from '../qr/qr.service';
 import { buildPaginationMeta } from '../../utils/response.util';
 
 import type { PaginationMeta } from '@hostel/shared-types';
+
+/**
+ * Roles that can approve/reject a leave at ANY pending stage,
+ * across all hostels and departments.
+ */
+const SUPER_APPROVER_ROLES: UserRole[] = [
+  UserRole.ADMIN,
+  UserRole.DIRECTOR,
+  UserRole.CHIEF_WARDEN,
+  UserRole.HOD,
+];
+
+/**
+ * Maps a pending status to the role whose workflow entry applies at that stage.
+ */
+const STATUS_TO_STAGE_ROLE: Partial<Record<LeaveStatus, UserRole>> = {
+  [LeaveStatus.PENDING_PARENT]: UserRole.PARENT,
+  [LeaveStatus.PENDING_WARDEN]: UserRole.WARDEN,
+  [LeaveStatus.PENDING_CHIEF_WARDEN]: UserRole.CHIEF_WARDEN,
+  [LeaveStatus.PENDING_HOD]: UserRole.HOD,
+};
+
+const ALL_PENDING_STATUSES: LeaveStatus[] = [
+  LeaveStatus.PENDING_PARENT,
+  LeaveStatus.PENDING_WARDEN,
+  LeaveStatus.PENDING_CHIEF_WARDEN,
+  LeaveStatus.PENDING_HOD,
+];
 
 export class LeaveService {
   /**
@@ -145,6 +172,9 @@ export class LeaveService {
 
   /**
    * Approve or reject a leave at the current approval stage.
+   *
+   * Admin, Vice Chancellor, Chief Warden and HOD can act at ANY pending stage
+   * for ANY student (no hostel/department scoping).
    */
   async processApproval(
     leaveRequestId: string,
@@ -160,19 +190,20 @@ export class LeaveService {
       throw AppError.notFound('Leave request not found');
     }
 
-    // Validate that this role can approve at the current stage
-    let workflow = APPROVAL_WORKFLOW[approverRole];
+    const isSuperApprover = SUPER_APPROVER_ROLES.includes(approverRole);
 
-    if (!workflow && (approverRole === UserRole.ADMIN || approverRole === UserRole.VICE_CHANCELLOR)) {
-      if (leaveRequest.status === LeaveStatus.PENDING_PARENT) {
-        workflow = APPROVAL_WORKFLOW[UserRole.PARENT];
-      } else if (leaveRequest.status === LeaveStatus.PENDING_WARDEN) {
-        workflow = APPROVAL_WORKFLOW[UserRole.WARDEN];
-      } else if (leaveRequest.status === LeaveStatus.PENDING_CHIEF_WARDEN) {
-        workflow = APPROVAL_WORKFLOW[UserRole.CHIEF_WARDEN];
-      } else if (leaveRequest.status === LeaveStatus.PENDING_HOD) {
-        workflow = APPROVAL_WORKFLOW[UserRole.HOD];
+    // Resolve which workflow entry applies
+    let workflow;
+    if (isSuperApprover) {
+      const stageRole = STATUS_TO_STAGE_ROLE[leaveRequest.status as LeaveStatus];
+      if (!stageRole) {
+        throw AppError.badRequest(
+          `This leave is not pending approval. Current status: ${leaveRequest.status}`,
+        );
       }
+      workflow = APPROVAL_WORKFLOW[stageRole];
+    } else {
+      workflow = APPROVAL_WORKFLOW[approverRole];
     }
 
     if (!workflow) {
@@ -196,26 +227,6 @@ export class LeaveService {
         const hostel = await Hostel.findOne({ wardenId: approverId });
         if (hostel && studentDoc.hostelId && hostel._id.toString() !== studentDoc.hostelId.toString()) {
           throw AppError.forbidden('This student is not in your hostel');
-        }
-      }
-    }
-
-    // For chief warden: verify the student belongs to their hostel if linked
-    if (approverRole === UserRole.CHIEF_WARDEN) {
-      if (studentDoc) {
-        const hostel = await Hostel.findOne({ chiefWardenId: approverId });
-        if (hostel && studentDoc.hostelId && hostel._id.toString() !== studentDoc.hostelId.toString()) {
-          throw AppError.forbidden('This student is not in your hostel');
-        }
-      }
-    }
-
-    // For HOD: verify the student belongs to their department if linked
-    if (approverRole === UserRole.HOD) {
-      if (studentDoc) {
-        const dept = await Department.findOne({ hodId: approverId });
-        if (dept && studentDoc.departmentId && dept._id.toString() !== studentDoc.departmentId.toString()) {
-          throw AppError.forbidden('This student is not in your department');
         }
       }
     }
@@ -411,7 +422,6 @@ export class LeaveService {
       .populate('entryGuardId', 'name');
   }
 
-
   /**
    * Get leaves for a student.
    */
@@ -445,6 +455,8 @@ export class LeaveService {
 
   /**
    * Get pending leaves for an approver based on their role.
+   *
+   * Admin, VC, Chief Warden and HOD see every pending leave (all stages, unscoped).
    */
   async getPendingLeaves(
     approverId: string,
@@ -454,38 +466,19 @@ export class LeaveService {
     const workflow = APPROVAL_WORKFLOW[role];
     const filter: Record<string, unknown> = {};
 
-    if (role === UserRole.ADMIN || role === UserRole.VICE_CHANCELLOR) {
-      filter.status = {
-        $in: [
-          LeaveStatus.PENDING_PARENT,
-          LeaveStatus.PENDING_WARDEN,
-          LeaveStatus.PENDING_CHIEF_WARDEN,
-          LeaveStatus.PENDING_HOD,
-        ],
-      };
+    if (SUPER_APPROVER_ROLES.includes(role)) {
+      filter.status = { $in: ALL_PENDING_STATUSES };
     } else if (workflow) {
       filter.status = workflow.fromStatus;
     } else {
       throw AppError.forbidden('Your role does not have approval permissions');
     }
 
-    // Scope to relevant students based on role
+    // Scope to relevant students based on role (non-super approvers only)
     if (role === UserRole.WARDEN) {
       const hostel = await Hostel.findOne({ wardenId: approverId });
       if (hostel) {
         const studentIds = await Student.find({ hostelId: hostel._id }).distinct('_id');
-        filter.studentId = { $in: studentIds };
-      }
-    } else if (role === UserRole.CHIEF_WARDEN) {
-      const hostel = await Hostel.findOne({ chiefWardenId: approverId });
-      if (hostel) {
-        const studentIds = await Student.find({ hostelId: hostel._id }).distinct('_id');
-        filter.studentId = { $in: studentIds };
-      }
-    } else if (role === UserRole.HOD) {
-      const dept = await Department.findOne({ hodId: approverId });
-      if (dept) {
-        const studentIds = await Student.find({ departmentId: dept._id }).distinct('_id');
         filter.studentId = { $in: studentIds };
       }
     } else if (role === UserRole.PARENT) {
@@ -618,21 +611,7 @@ export class LeaveService {
           total: { $sum: 1 },
           pending: {
             $sum: {
-              $cond: [
-                {
-                  $in: [
-                    '$status',
-                    [
-                      LeaveStatus.PENDING_PARENT,
-                      LeaveStatus.PENDING_WARDEN,
-                      LeaveStatus.PENDING_CHIEF_WARDEN,
-                      LeaveStatus.PENDING_HOD,
-                    ],
-                  ],
-                },
-                1,
-                0,
-              ],
+              $cond: [{ $in: ['$status', ALL_PENDING_STATUSES] }, 1, 0],
             },
           },
           approved: {

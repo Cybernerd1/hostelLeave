@@ -36,24 +36,38 @@ export function QRScanPage() {
     setLeaveInfo(null);
     setRecordMsg(null);
     try {
-      const res = await api.get<{ success: boolean; data: Record<string, unknown> }>(`/leaves/${id.trim()}`);
+      // The human-readable leave ID (LV-...) only works on the public lookup route.
+      // GET /leaves/:id expects a MongoDB _id and fails with 400 for LV-... IDs.
+      const res = await api.get<{ success: boolean; data: Record<string, unknown> }>(
+        `/leaves/public/${encodeURIComponent(id.trim())}`,
+      );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const d = res.data.data as any;
+      // The public route returns the populated student under `student` (not `studentId`).
+      const st = d.student;
       setLeaveInfo({
         _id: d._id,
         leaveId: d.leaveId,
         status: d.status,
-        studentName: d.studentId?.name ?? 'Unknown',
-        rollNumber: d.studentId?.rollNumber ?? '—',
+        studentName: st?.name ?? 'Unknown',
+        rollNumber: st?.rollNumber ?? '—',
         fromDate: d.fromDate,
         toDate: d.toDate,
         destination: d.destination,
         leaveType: d.leaveType,
-        hostel: d.studentId?.hostelId?.name ?? '—',
-        room: d.studentId?.roomId?.roomNumber ?? '—',
+        hostel: st?.hostelId?.name ?? '—',
+        room: st?.roomId?.roomNumber ?? '—',
       });
-    } catch {
-      setError('Leave pass not found or invalid ID.');
+    } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const status = (err as any)?.response?.status;
+      if (status === 404) {
+        setError('Leave pass not found. Check the Leave ID.');
+      } else if (status === 429) {
+        setError('Too many requests. Please wait a moment and try again.');
+      } else {
+        setError('Could not verify the pass right now. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -104,7 +118,7 @@ export function QRScanPage() {
           <div className="guard-input-row">
             <input
               className="filter-input"
-              placeholder="Enter Leave ID (e.g. LV-2024-001)"
+              placeholder="Enter Leave ID (e.g. LV-20261013-PPA8G)"
               value={manualId}
               onChange={(e) => setManualId(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleScan()}

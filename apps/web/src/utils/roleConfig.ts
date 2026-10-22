@@ -11,7 +11,7 @@ export const UserRole = {
   WARDEN: 'warden',
   CHIEF_WARDEN: 'chief_warden',
   HOD: 'hod',
-  VICE_CHANCELLOR: 'vice_chancellor',
+  DIRECTOR: 'director',
   GUARD: 'guard',
   ADMIN: 'admin',
 } as const;
@@ -121,14 +121,14 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
     basePath: '/chief-warden',
     accent: '#0891b2',
     navItems: [
-      { label: 'Dashboard',      path: '/chief-warden/dashboard', icon: ICONS.dashboard },
-      { label: 'Approvals',      path: '/chief-warden/approvals', icon: ICONS.approvals },
-      { label: 'All Leaves',     path: '/chief-warden/leaves',    icon: ICONS.leaves },
-      { label: 'Students',       path: '/chief-warden/students',  icon: ICONS.students },
-      { label: 'Manage Hostels', path: '/chief-warden/manage',    icon: ICONS.hostelManage },
-      { label: 'Reports',        path: '/chief-warden/reports',   icon: ICONS.reports },
-      { label: 'Notifications',  path: '/chief-warden/notifications', icon: ICONS.notifications },
-      { label: 'Profile',        path: '/chief-warden/profile',   icon: ICONS.profile },
+      { label: 'Dashboard', path: '/chief-warden/dashboard', icon: ICONS.dashboard },
+      { label: 'Approvals', path: '/chief-warden/approvals', icon: ICONS.approvals },
+      { label: 'All Leaves', path: '/chief-warden/leaves', icon: ICONS.leaves },
+      { label: 'Students', path: '/chief-warden/students', icon: ICONS.students },
+      { label: 'Manage Hostels', path: '/chief-warden/manage', icon: ICONS.hostelManage },
+      { label: 'Reports', path: '/chief-warden/reports', icon: ICONS.reports },
+      { label: 'Notifications', path: '/chief-warden/notifications', icon: ICONS.notifications },
+      { label: 'Profile', path: '/chief-warden/profile', icon: ICONS.profile },
     ],
   },
 
@@ -148,17 +148,17 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
     ],
   },
 
-  [UserRole.VICE_CHANCELLOR]: {
-    label: 'Vice Chancellor',
-    dashboardPath: '/vc/dashboard',
-    basePath: '/vc',
+  [UserRole.DIRECTOR]: {
+    label: 'Director',
+    dashboardPath: '/director/dashboard',
+    basePath: '/director',
     accent: '#d97706',
     navItems: [
-      { label: 'Dashboard', path: '/vc/dashboard', icon: ICONS.dashboard },
-      { label: 'All Leaves', path: '/vc/leaves', icon: ICONS.leaves },
-      { label: 'Reports', path: '/vc/reports', icon: ICONS.reports },
-      { label: 'Notifications', path: '/vc/notifications', icon: ICONS.notifications },
-      { label: 'Profile', path: '/vc/profile', icon: ICONS.profile },
+      { label: 'Dashboard', path: '/director/dashboard', icon: ICONS.dashboard },
+      { label: 'All Leaves', path: '/director/leaves', icon: ICONS.leaves },
+      { label: 'Reports', path: '/director/reports', icon: ICONS.reports },
+      { label: 'Notifications', path: '/director/notifications', icon: ICONS.notifications },
+      { label: 'Profile', path: '/director/profile', icon: ICONS.profile },
     ],
   },
 

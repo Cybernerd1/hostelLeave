@@ -43,7 +43,7 @@ const ROLE_LABELS: Record<string, string> = {
   warden:          'Warden',
   chief_warden:    'Chief Warden',
   hod:             'HOD',
-  vice_chancellor: 'Vice Chancellor',
+  director:        'Director',
   admin:           'Admin',
 };
 
@@ -62,7 +62,7 @@ const APPROVER_REQUIRED_STATUS: Record<string, string> = {
   chief_warden:    'pending_chief_warden',
   hod:             'pending_hod',
   admin:           '', // admin can act on any pending
-  vice_chancellor: '',
+  director:        '',
 };
 
 function formatDate(dateStr: string | Date) {
@@ -128,6 +128,12 @@ export function LeaveDetailPage() {
     setPdfError('');
     try {
       const blob = await leaveApi.downloadPDF(id);
+      // Check if the response is actually JSON (error) instead of PDF
+      if (blob.type === 'application/json' || blob.type.includes('json')) {
+        const text = await blob.text();
+        const json = JSON.parse(text);
+        throw new Error(json.message || 'Could not generate PDF.');
+      }
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -136,8 +142,11 @@ export function LeaveDetailPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch {
-      setPdfError('Could not generate PDF. Please try again.');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err as { message?: string })?.message
+        || 'Could not generate PDF. Please try again.';
+      setPdfError(msg);
     } finally {
       setIsPdfLoading(false);
     }
@@ -181,7 +190,7 @@ export function LeaveDetailPage() {
 
   let canApprove = false;
   if (isPending && leave) {
-    if (role === 'admin' || role === 'vice_chancellor') {
+    if (role === 'admin' || role === 'director') {
       canApprove = true;
     } else {
       const requiredStatus = APPROVER_REQUIRED_STATUS[role];
