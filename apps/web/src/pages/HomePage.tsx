@@ -80,8 +80,8 @@ const ROLES: RoleEntry[] = [
     ],
   },
   {
-    id: 'vice_chancellor',
-    label: 'Vice Chancellor',
+    id: 'director',
+    label: 'Director',
     summary: 'Institute-wide visibility.',
     points: [
       'Review all leave applications',

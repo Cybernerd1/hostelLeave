@@ -160,7 +160,7 @@ export const createStaffSchema = z.object({
         UserRole.WARDEN,
         UserRole.CHIEF_WARDEN,
         UserRole.HOD,
-        UserRole.VICE_CHANCELLOR,
+        UserRole.DIRECTOR,
         UserRole.GUARD,
       ].includes(role),
     { message: 'Invalid staff role' },

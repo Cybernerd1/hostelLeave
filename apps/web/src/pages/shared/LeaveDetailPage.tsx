@@ -43,7 +43,7 @@ const ROLE_LABELS: Record<string, string> = {
   warden:          'Warden',
   chief_warden:    'Chief Warden',
   hod:             'HOD',
-  vice_chancellor: 'Vice Chancellor',
+  director:        'Director',
   admin:           'Admin',
 };
 
@@ -62,7 +62,7 @@ const APPROVER_REQUIRED_STATUS: Record<string, string> = {
   chief_warden:    'pending_chief_warden',
   hod:             'pending_hod',
   admin:           '', // admin can act on any pending
-  vice_chancellor: '',
+  director:        '',
 };
 
 function formatDate(dateStr: string | Date) {
@@ -190,7 +190,7 @@ export function LeaveDetailPage() {
 
   let canApprove = false;
   if (isPending && leave) {
-    if (role === 'admin' || role === 'vice_chancellor') {
+    if (role === 'admin' || role === 'director') {
       canApprove = true;
     } else {
       const requiredStatus = APPROVER_REQUIRED_STATUS[role];

@@ -161,10 +161,6 @@ export const getAllLeaves = asyncHandler(async (req: Request, res: Response) => 
   sendPaginated(res, result.data, result.pagination, 'Leaves retrieved');
 });
 
-/** GET /api/v1/leaves/stats - Get leave statistics (role-scoped) */
-
-/** GET /api/v1/leaves/stats - Get leave statistics (role-scoped) */
-
 /** GET /api/v1/leaves/stats - Get role-scoped leave statistics */
 export const getLeaveStats = asyncHandler(
   async (req: Request, res: Response) => {

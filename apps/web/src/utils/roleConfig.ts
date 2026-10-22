@@ -12,7 +12,6 @@ export const UserRole = {
   CHIEF_WARDEN: 'chief_warden',
   HOD: 'hod',
   DIRECTOR: 'director',
-  VICE_CHANCELLOR: 'vice_chancellor',   // role stored in DB as 'director'
   GUARD: 'guard',
   ADMIN: 'admin',
 } as const;
@@ -146,20 +145,6 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
       { label: 'Reports', path: '/hod/reports', icon: ICONS.reports },
       { label: 'Notifications', path: '/hod/notifications', icon: ICONS.notifications },
       { label: 'Profile', path: '/hod/profile', icon: ICONS.profile },
-    ],
-  },
-
-  [UserRole.VICE_CHANCELLOR]: {
-    label: 'Director',
-    dashboardPath: '/vc/dashboard',
-    basePath: '/vc',
-    accent: '#d97706',
-    navItems: [
-      { label: 'Dashboard', path: '/vc/dashboard', icon: ICONS.dashboard },
-      { label: 'All Leaves', path: '/vc/leaves', icon: ICONS.leaves },
-      { label: 'Reports', path: '/vc/reports', icon: ICONS.reports },
-      { label: 'Notifications', path: '/vc/notifications', icon: ICONS.notifications },
-      { label: 'Profile', path: '/vc/profile', icon: ICONS.profile },
     ],
   },
 

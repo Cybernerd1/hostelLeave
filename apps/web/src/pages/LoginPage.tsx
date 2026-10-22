@@ -25,7 +25,7 @@ const DEMO_CREDENTIALS: Record<string, { email: string; password: string; label:
   warden:           { email: 'warden@demo.edu',      password: 'Demo@123', label: 'Warden' },
   chief_warden:     { email: 'chiefwarden@demo.edu', password: 'Demo@123', label: 'Chief Warden' },
   hod:              { email: 'hod@demo.edu',         password: 'Demo@123', label: 'HOD' },
-  vice_chancellor:  { email: 'vc@demo.edu',          password: 'Demo@123', label: 'Vice Chancellor' },
+  director:         { email: 'vc@demo.edu',          password: 'Demo@123', label: 'Director' },
   guard:            { email: 'guard@demo.edu',       password: 'Demo@123', label: 'Gate Guard' },
   admin:            { email: 'admin@demo.edu',       password: 'Demo@123', label: 'Administrator' },
 };
@@ -37,7 +37,7 @@ const ROLE_OPTIONS: { id: string; label: string; desc: string; icon: string }[] 
   { id: 'warden',          label: 'Warden',           desc: 'Review assigned hostel leave requests.',           icon: 'M3 21h18M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16M9 7h1m4 0h1M9 11h1m4 0h1M9 15h1m4 0h1' },
   { id: 'chief_warden',    label: 'Chief Warden',     desc: 'Oversee hostels, staff and escalated approvals.',  icon: 'M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4zM9 12l2 2 4-4' },
   { id: 'hod',             label: 'HOD',              desc: 'Approve departmental leave requests.',             icon: 'M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2' },
-  { id: 'vice_chancellor', label: 'Vice Chancellor',  desc: 'Institute-wide leave oversight and reports.',      icon: 'M3 22h18M6 22V10m12 12V10M3 10l9-7 9 7H3zM10 14h4m-4 4h4' },
+  { id: 'director',        label: 'Director',         desc: 'Institute-wide leave oversight and reports.',      icon: 'M3 22h18M6 22V10m12 12V10M3 10l9-7 9 7H3zM10 14h4m-4 4h4' },
   { id: 'guard',           label: 'Gate Guard',       desc: 'Verify QR passes at the gate.',                    icon: 'M4 7V4h3M20 7V4h-3M4 17v3h3m13-3v3h-3M7 12h10' },
   { id: 'admin',           label: 'Administrator',    desc: 'Manage students, staff, hostels and records.',     icon: 'M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6M9 8h6m2 8h6' },
 ];

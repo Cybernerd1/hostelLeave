@@ -156,18 +156,6 @@ export default function App() {
               <Route path="/director/profile" element={<ProfilePage />} />
             </Route>
           </Route>
-          {/* ─── Vice Chancellor Routes ──────────────────────────────── */}
-          <Route element={<ProtectedRoute allowedRoles={[UserRole.VICE_CHANCELLOR]} />}>
-            <Route element={<DashboardLayout />}>
-              <Route path="/vc/dashboard" element={<DirectorDashboard />} />
-              <Route path="/vc/leaves" element={<AllLeavesPage />} />
-              <Route path="/vc/leaves/:id" element={<LeaveDetailPage />} />
-              <Route path="/vc/reports" element={<ReportsPage />} />
-              <Route path="/vc/notifications" element={<NotificationsPage />} />
-              <Route path="/vc/profile" element={<ProfilePage />} />
-            </Route>
-          </Route>
-
           {/* ─── Guard Routes ────────────────────────────────────────── */}
           <Route element={<ProtectedRoute allowedRoles={[UserRole.GUARD]} />}>
             <Route element={<DashboardLayout />}>

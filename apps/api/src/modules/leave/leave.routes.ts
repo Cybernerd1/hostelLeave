@@ -38,7 +38,6 @@ const APPROVAL_ROLES = [
   UserRole.CHIEF_WARDEN,
   UserRole.HOD,
   UserRole.ADMIN,
-  UserRole.VICE_CHANCELLOR,
 ];
 
 const STATS_ROLES = [
@@ -46,12 +45,11 @@ const STATS_ROLES = [
   UserRole.WARDEN,
   UserRole.CHIEF_WARDEN,
   UserRole.HOD,
-  UserRole.VICE_CHANCELLOR,
+  UserRole.DIRECTOR,
 ];
 
 const ALL_LEAVES_ROLES = [
   UserRole.ADMIN,
-  UserRole.VICE_CHANCELLOR,
   UserRole.DIRECTOR,
   UserRole.WARDEN,
   UserRole.CHIEF_WARDEN,
@@ -97,23 +95,9 @@ router.put(
 );
 
 // ─── Statistics ───────────────────────────────────────────────────
-// router.get(
-//   '/stats',
-//   authorize(...STATS_ROLES),
-//   leaveController.getLeaveStats,
-// );
 router.get(
   '/stats',
-  authenticate,
-  authorize(
-    UserRole.PARENT,
-    UserRole.WARDEN,
-    UserRole.CHIEF_WARDEN,
-    UserRole.HOD,
-    UserRole.ADMIN,
-    UserRole.VICE_CHANCELLOR,
-    UserRole.DIRECTOR,
-  ),
+  authorize(...STATS_ROLES),
   leaveController.getLeaveStats,
 );
 

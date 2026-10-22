@@ -12,7 +12,7 @@
     "dev": "tsc --watch"
   },
   "devDependencies": {
-    "typescript": "5.5.4",
-    "rimraf": "^5.0.0"
+    "rimraf": "^5.0.0",
+    "typescript": "^5.9.3"
   }
 }

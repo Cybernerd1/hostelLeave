@@ -74,7 +74,7 @@ export const WEB_DASHBOARD_ROLES: UserRole[] = [
   UserRole.WARDEN,
   UserRole.CHIEF_WARDEN,
   UserRole.HOD,
-  UserRole.VICE_CHANCELLOR,
+  UserRole.DIRECTOR,
   UserRole.GUARD,
   UserRole.STUDENT,
   UserRole.PARENT,
@@ -236,7 +236,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   [UserRole.WARDEN]: 'Warden',
   [UserRole.CHIEF_WARDEN]: 'Chief Warden',
   [UserRole.HOD]: 'Head of Department',
-  [UserRole.VICE_CHANCELLOR]: 'Vice Chancellor',
+  [UserRole.DIRECTOR]: 'Director',
   [UserRole.GUARD]: 'Security Guard',
   [UserRole.ADMIN]: 'Administrator',
 };
@@ -280,11 +280,11 @@ export const ROLE_NAVIGATION: Record<
     { label: 'Pending Leaves', path: '/hod/pending', icon: 'ClipboardList' },
     { label: 'Leave History', path: '/hod/history', icon: 'History' },
   ],
-  [UserRole.VICE_CHANCELLOR]: [
-    { label: 'Dashboard', path: '/vc', icon: 'LayoutDashboard' },
-    { label: 'All Leaves', path: '/vc/leaves', icon: 'FileText' },
-    { label: 'Analytics', path: '/vc/analytics', icon: 'BarChart3' },
-    { label: 'Reports', path: '/vc/reports', icon: 'FileSpreadsheet' },
+  [UserRole.DIRECTOR]: [
+    { label: 'Dashboard', path: '/director', icon: 'LayoutDashboard' },
+    { label: 'All Leaves', path: '/director/leaves', icon: 'FileText' },
+    { label: 'Analytics', path: '/director/analytics', icon: 'BarChart3' },
+    { label: 'Reports', path: '/director/reports', icon: 'FileSpreadsheet' },
   ],
   [UserRole.GUARD]: [
     { label: 'Dashboard', path: '/guard', icon: 'LayoutDashboard' },
