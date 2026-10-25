@@ -84,5 +84,5 @@ export interface DashboardStats {
 export interface ExportResponse {
   filename: string;
   contentType: string;
-  data: Buffer | string;
+  data: Uint8Array | string;
 }
