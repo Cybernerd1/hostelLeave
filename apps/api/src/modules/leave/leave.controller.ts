@@ -58,7 +58,7 @@ export const getLeaveById = asyncHandler(async (req: Request, res: Response) => 
     return sendSuccess(res, null, 'Leave request not found');
   }
 
-  sendSuccess(res, leaveRequest, 'Leave details retrieved');
+  return sendSuccess(res, leaveRequest, 'Leave details retrieved');
 });
 
 /** GET /api/v1/leaves/public/:leaveId - Public leave info for guard QR verification (no auth) */
@@ -66,7 +66,7 @@ export const getPublicLeaveInfo = asyncHandler(async (req: Request, res: Respons
   const { leaveId } = req.params;
 
   // Look up by leaveId (human-readable) string OR by MongoDB _id
-  const { LeaveRequest } = await import('../../models/leaveRequest.model');
+  const { LeaveRequest } = await import('../../models/leaveRequest.model.js');
   const leaveRequest = await LeaveRequest.findOne(
     leaveId.match(/^[a-f\d]{24}$/i) ? { _id: leaveId } : { leaveId },
   )
@@ -109,7 +109,7 @@ export const getPublicLeaveInfo = asyncHandler(async (req: Request, res: Respons
     approvals: leaveRequest.approvals as any,
   };
 
-  sendSuccess(res, publicData, 'Leave details retrieved');
+  return sendSuccess(res, publicData, 'Leave details retrieved');
 });
 
 /** GET /api/v1/leaves/my - Get student's own leaves */

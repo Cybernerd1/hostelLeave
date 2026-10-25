@@ -7,14 +7,13 @@
     "declaration": false,
     "declarationMap": false,
     "sourceMap": true,
-    "baseUrl": "./src",
     "paths": {
-      "@/*": ["./*"],
-      "@config/*": ["./config/*"],
-      "@models/*": ["./models/*"],
-      "@modules/*": ["./modules/*"],
-      "@middleware/*": ["./middleware/*"],
-      "@utils/*": ["./utils/*"],
+      "@/*": ["./src/*"],
+      "@config/*": ["./src/config/*"],
+      "@models/*": ["./src/models/*"],
+      "@modules/*": ["./src/modules/*"],
+      "@middleware/*": ["./src/middleware/*"],
+      "@utils/*": ["./src/utils/*"],
       "@shared/types": ["../../packages/shared-types/src"],
       "@shared/utils": ["../../packages/shared-utils/src"]
     }

@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "commonjs",
+    "module": "nodenext",
     "lib": ["ES2022"],
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
@@ -21,12 +21,11 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "incremental": true,
-    "baseUrl": ".",
     "paths": {
-      "@shared/types": ["packages/shared-types/src"],
-      "@shared/types/*": ["packages/shared-types/src/*"],
-      "@shared/utils": ["packages/shared-utils/src"],
-      "@shared/utils/*": ["packages/shared-utils/src/*"]
+      "@shared/types": ["./packages/shared-types/src"],
+      "@shared/types/*": ["./packages/shared-types/src/*"],
+      "@shared/utils": ["./packages/shared-utils/src"],
+      "@shared/utils/*": ["./packages/shared-utils/src/*"]
     }
   },
   "exclude": ["node_modules", "dist", ".next", "coverage"]
