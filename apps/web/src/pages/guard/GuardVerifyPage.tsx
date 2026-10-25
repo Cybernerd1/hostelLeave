@@ -11,8 +11,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import './GuardVerifyPage.css';
 
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api/v1`
+const API_BASE = import.meta.env.API_URL
+  ? `${import.meta.env.API_URL}/api/v1`
   : '/api/v1';
 
 interface PublicLeaveData {
