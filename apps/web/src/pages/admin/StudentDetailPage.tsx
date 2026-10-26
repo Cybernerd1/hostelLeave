@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { adminApi, type StudentRecord } from '@/services/admin.service';
+import { adminApi, type StudentRecord, type ParentRecord } from '@/services/admin.service';
 import { Card } from '@/components/ui/Card';
 import '../shared/ApprovalsPage.css';
 import './AdminPages.css';
@@ -15,6 +15,7 @@ export function StudentDetailPage() {
   const [selectedParentId, setSelectedParentId] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [assignMsg, setAssignMsg] = useState<string | null>(null);
+  const [parents, setParents] = useState<ParentRecord[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -26,6 +27,10 @@ export function StudentDetailPage() {
       .catch(() => setStudent(null))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    adminApi.getParents({ page: 1, limit: 100 }).then((response) => setParents(response.data)).catch(() => setParents([]));
+  }, []);
 
   const handleAssign = async () => {
     if (!id || !selectedParentId) return;
@@ -120,6 +125,9 @@ export function StudentDetailPage() {
             <div className="detail-rows">
               <div className="detail-row"><span className="detail-label">Hostel</span><span className="detail-value">{(student.hostelId as unknown as { name: string })?.name || 'Not Assigned'}</span></div>
               <div className="detail-row"><span className="detail-label">Room</span><span className="detail-value">{(student.roomId as unknown as { roomNumber: string })?.roomNumber || 'Not Assigned'}</span></div>
+              <div className="detail-row"><span className="detail-label">Room Capacity</span><span className="detail-value">{(student.roomId as unknown as { capacity?: number })?.capacity ?? '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Allocation Date</span><span className="detail-value">{student.allocatedAt ? new Date(student.allocatedAt).toLocaleDateString() : '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Allocation Status</span><span className={`status-badge status-badge--${student.allocationStatus === 'active' || student.roomId ? 'approved' : 'pending'}`}>{student.allocationStatus === 'active' || student.roomId ? 'Allocated' : 'Awaiting Hostel Allocation'}</span></div>
             </div>
           </div>
         </Card>

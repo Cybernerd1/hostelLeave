@@ -6,6 +6,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { adminApi, type ApplicationRecord } from '@/services/admin.service';
+import type { RoomRecord } from '@/services/admin.service';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
 import '../shared/ApprovalsPage.css';
 import './AdminPages.css';
@@ -21,10 +23,18 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 export function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [application, setApplication] = useState<ApplicationRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [availableHostels, setAvailableHostels] = useState<Array<{ _id: string; name: string; type: string; roomsAvailable: number; seatsRemaining: number }>>([]);
+  const [availableRooms, setAvailableRooms] = useState<RoomRecord[]>([]);
+  const [selectedHostelId, setSelectedHostelId] = useState('');
+  const [selectedRoomId, setSelectedRoomId] = useState('');
+  const [allocationReason, setAllocationReason] = useState('Approved student hostel allocation');
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -33,6 +43,46 @@ export function ApplicationDetailPage() {
       .catch(() => setApplication(null))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const canAllocate = (user?.role === 'admin' || user?.role === 'chief_warden' || user?.role === 'warden') && application?.status === 'approved';
+
+  useEffect(() => {
+    if (!canAllocate) return;
+    setAvailabilityLoading(true);
+    setAvailabilityError(null);
+    adminApi.getAvailableHostels()
+      .then(setAvailableHostels)
+      .catch(() => setAvailabilityError('Unable to load hostel availability.'))
+      .finally(() => setAvailabilityLoading(false));
+  }, [canAllocate]);
+
+  const handleHostelChange = async (hostelId: string) => {
+    setSelectedHostelId(hostelId);
+    setSelectedRoomId('');
+    setAvailableRooms([]);
+    if (!hostelId) return;
+    setAvailabilityLoading(true);
+    setAvailabilityError(null);
+    try { setAvailableRooms(await adminApi.getAvailableRooms(hostelId)); } catch { setAvailabilityError('Unable to load rooms for the selected hostel.'); } finally { setAvailabilityLoading(false); }
+  };
+
+  const handleAllocation = async () => {
+    if (!id || !selectedHostelId || !selectedRoomId) return;
+    setSubmitting(true);
+    setMsg(null);
+    try {
+      await adminApi.allocateApplication(id, { hostelId: selectedHostelId, roomId: selectedRoomId, reason: allocationReason.trim() || 'Hostel allocation' });
+      setMsg('✅ Hostel and room allocated successfully.');
+      setApplication(await adminApi.getApplicationById(id));
+      setSelectedHostelId('');
+      setSelectedRoomId('');
+      setAvailableRooms([]);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setMsg('❌ ' + (e.response?.data?.message || 'Room is no longer available. Refresh and try again.'));
+      if (selectedHostelId) handleHostelChange(selectedHostelId);
+    } finally { setSubmitting(false); }
+  };
 
   const status = application ? (STATUS_CONFIG[application.status] || { label: application.status, color: 'neutral' }) : null;
 
@@ -182,6 +232,28 @@ export function ApplicationDetailPage() {
             </div>
           </Card>
         ) : null}
+
+        {canAllocate && (
+          <Card variant="default" padding="lg">
+            <div className="detail-section">
+              <p className="detail-section__title">Allocate Hostel & Room</p>
+              <p style={{ color: 'var(--color-neutral-500)', fontSize: '0.875rem' }}>Availability is rechecked by the server when you confirm.</p>
+              {availabilityError && <div className="error-banner">{availabilityError}</div>}
+              <div className="filters-row">
+                <select className="filter-select" value={selectedHostelId} onChange={(e) => handleHostelChange(e.target.value)} disabled={availabilityLoading}>
+                  <option value="">{availabilityLoading ? 'Loading hostels…' : availableHostels.length ? 'Select hostel' : 'No hostels with seats'}</option>
+                  {availableHostels.map((hostel) => <option key={hostel._id} value={hostel._id}>{hostel.name} — {hostel.roomsAvailable} rooms available, {hostel.seatsRemaining} seats remaining</option>)}
+                </select>
+                <select className="filter-select" value={selectedRoomId} onChange={(e) => setSelectedRoomId(e.target.value)} disabled={!selectedHostelId || availabilityLoading}>
+                  <option value="">{selectedHostelId ? (availableRooms.length ? 'Select room' : 'No rooms with seats') : 'Select a hostel first'}</option>
+                  {availableRooms.map((room) => <option key={room._id} value={room._id}>{room.roomNumber} — {room.availableSeats} of {room.capacity} seats available</option>)}
+                </select>
+              </div>
+              <input className="filter-input" style={{ width: '100%', marginBottom: '0.75rem' }} value={allocationReason} onChange={(e) => setAllocationReason(e.target.value)} placeholder="Allocation reason" maxLength={500} />
+              <button className="btn btn--primary" onClick={handleAllocation} disabled={submitting || !selectedHostelId || !selectedRoomId || availabilityLoading}>{submitting ? 'Allocating…' : 'Confirm Allocation'}</button>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Action Buttons */}

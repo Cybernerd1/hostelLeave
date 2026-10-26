@@ -39,6 +39,9 @@ export interface StudentRecord {
   guardianPincode?: string;
   guardianCountry?: string;
   applicationStatus: 'pending' | 'approved' | 'rejected' | 'allocated';
+  allocationStatus?: 'none' | 'active' | 'transferred' | 'ended';
+  allocatedAt?: string;
+  allocatedBy?: { _id: string; name: string; email?: string; role?: string };
   isActive: boolean;
   createdAt: string;
   departmentId?: { _id: string; name: string; code: string };
@@ -87,8 +90,13 @@ export interface HostelRecord {
   name: string;
   type: string;
   totalRooms: number;
+  studentsPerRoom: 1 | 2 | 3;
   capacity: number;
   occupancy: number;
+  occupiedSeats: number;
+  availableSeats: number;
+  fullyOccupiedRooms: number;
+  occupancyPercentage: number;
   isActive: boolean;
   address?: string;
   contactNumber?: string;
@@ -103,8 +111,22 @@ export interface RoomRecord {
   type: string;
   capacity: number;
   occupied: number;
+  availableSeats: number;
+  occupancyStatus: 'Available' | 'Partially Occupied' | 'Full';
   isActive: boolean;
   hostelId?: { _id: string; name: string };
+  students?: Array<{ _id: string; name: string; rollNumber: string; studentNumber?: string; email?: string }>;
+}
+
+export interface AllocationCandidate {
+  _id: string;
+  name: string;
+  rollNumber: string;
+  studentNumber?: string;
+  gender: string;
+  hostelId?: string;
+  roomId?: string;
+  applicationStatus: string;
 }
 
 export interface StaffRecord {
@@ -194,6 +216,11 @@ export interface DashboardStats {
   totalDepartments: number;
   totalHostels: number;
   totalRooms: number;
+  totalBedCapacity: number;
+  occupiedSeats: number;
+  availableSeats: number;
+  fullyOccupiedRooms: number;
+  studentsAwaitingAllocation: number;
   totalApplications: number;
   pendingApplications: number;
   approvedApplications: number;
@@ -265,10 +292,40 @@ export const adminApi = {
     return { data: res.data.data, pagination: res.data.pagination };
   },
 
+  createDepartment: async (data: { name: string; code: string; description?: string }): Promise<DepartmentRecord> => {
+    const res = await api.post<{ success: boolean; data: DepartmentRecord }>('/admin/departments', data);
+    return res.data.data;
+  },
+
+  updateDepartment: async (id: string, data: Partial<{ name: string; code: string; description: string; isActive: boolean }>): Promise<DepartmentRecord> => {
+    const res = await api.put<{ success: boolean; data: DepartmentRecord }>(`/admin/departments/${id}`, data);
+    return res.data.data;
+  },
+
+  deleteDepartment: async (id: string): Promise<DepartmentRecord> => {
+    const res = await api.delete<{ success: boolean; data: DepartmentRecord }>(`/admin/departments/${id}`);
+    return res.data.data;
+  },
+
   // Courses
   getCourses: async (params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<CourseRecord>> => {
     const res = await api.get('/admin/courses', { params });
     return { data: res.data.data, pagination: res.data.pagination };
+  },
+
+  createCourse: async (data: { name: string; code: string; departmentId: string; duration: number; totalSemesters: number; description?: string }): Promise<CourseRecord> => {
+    const res = await api.post<{ success: boolean; data: CourseRecord }>('/admin/courses', data);
+    return res.data.data;
+  },
+
+  updateCourse: async (id: string, data: Partial<{ name: string; code: string; departmentId: string; duration: number; totalSemesters: number; description: string; isActive: boolean }>): Promise<CourseRecord> => {
+    const res = await api.put<{ success: boolean; data: CourseRecord }>(`/admin/courses/${id}`, data);
+    return res.data.data;
+  },
+
+  deleteCourse: async (id: string): Promise<CourseRecord> => {
+    const res = await api.delete<{ success: boolean; data: CourseRecord }>(`/admin/courses/${id}`);
+    return res.data.data;
   },
 
   // Hostels
@@ -280,6 +337,31 @@ export const adminApi = {
   getHostelsWithWardens: async (): Promise<HostelRecord[]> => {
     const res = await api.get('/admin/hostels', { params: { limit: 100 } });
     return res.data.data as HostelRecord[];
+  },
+
+  createHostel: async (data: {
+    name: string;
+    type: string;
+    totalRooms: number;
+    studentsPerRoom: 1 | 2 | 3;
+  }): Promise<HostelRecord> => {
+    const res = await api.post<{ success: boolean; data: HostelRecord }>('/admin/hostels', data);
+    return res.data.data;
+  },
+
+  updateHostel: async (id: string, data: Partial<{
+    name: string;
+    type: string;
+    totalRooms: number;
+    studentsPerRoom: 1 | 2 | 3;
+    isActive: boolean;
+  }>): Promise<HostelRecord> => {
+    const res = await api.put<{ success: boolean; data: HostelRecord }>(`/admin/hostels/${id}`, data);
+    return res.data.data;
+  },
+
+  deleteHostel: async (id: string): Promise<void> => {
+    await api.delete(`/admin/hostels/${id}`);
   },
 
   // Chief Warden: create warden
@@ -300,9 +382,44 @@ export const adminApi = {
   },
 
   // Rooms
-  getRooms: async (params?: { page?: number; limit?: number; hostelId?: string; search?: string }): Promise<PaginatedResponse<RoomRecord>> => {
+  getRooms: async (params?: { page?: number; limit?: number; hostelId?: string; search?: string; availability?: string }): Promise<PaginatedResponse<RoomRecord>> => {
     const res = await api.get('/admin/rooms', { params });
     return { data: res.data.data, pagination: res.data.pagination };
+  },
+
+  getHostelRooms: async (hostelId: string, params?: { search?: string }): Promise<RoomRecord[]> => {
+    const res = await api.get<{ success: boolean; data: RoomRecord[] }>(`/admin/hostels/${hostelId}/rooms`, { params });
+    return res.data.data;
+  },
+
+  updateRoom: async (id: string, data: Partial<{ roomNumber: string; floor: string; capacity: 1 | 2 | 3; isActive: boolean }>): Promise<RoomRecord> => {
+    const res = await api.put<{ success: boolean; data: RoomRecord }>(`/admin/rooms/${id}`, data);
+    return res.data.data;
+  },
+
+  deleteRoom: async (id: string): Promise<void> => {
+    await api.delete(`/admin/rooms/${id}`);
+  },
+
+  getAllocationCandidates: async (): Promise<AllocationCandidate[]> => {
+    const res = await api.get<{ success: boolean; data: AllocationCandidate[] }>('/admin/students/allocation-candidates');
+    return res.data.data;
+  },
+
+  getAvailableHostels: async (): Promise<Array<{
+    _id: string;
+    name: string;
+    type: string;
+    roomsAvailable: number;
+    seatsRemaining: number;
+  }>> => {
+    const res = await api.get('/admin/hostels/available');
+    return res.data.data;
+  },
+
+  getAvailableRooms: async (hostelId: string): Promise<RoomRecord[]> => {
+    const res = await api.get<{ success: boolean; data: RoomRecord[] }>(`/admin/hostels/${hostelId}/available-rooms`);
+    return res.data.data;
   },
 
   // Staff
@@ -387,6 +504,25 @@ export const adminApi = {
       `/admin/students/${studentId}/allocate`,
       data,
     );
+    return res.data.data;
+  },
+
+  allocateApplication: async (applicationId: string, data: {
+    hostelId: string;
+    roomId: string;
+    reason: string;
+  }): Promise<StudentRecord> => {
+    const res = await api.post<{ success: boolean; data: StudentRecord }>(`/admin/applications/${applicationId}/allocate`, data);
+    return res.data.data;
+  },
+
+  getStudentAllocation: async (studentId: string): Promise<{ student: StudentRecord; history: Array<Record<string, unknown>> }> => {
+    const res = await api.get(`/admin/students/${studentId}/allocation`);
+    return res.data.data;
+  },
+
+  removeStudentFromRoom: async (studentId: string): Promise<StudentRecord> => {
+    const res = await api.delete<{ success: boolean; data: StudentRecord }>(`/admin/students/${studentId}/room`);
     return res.data.data;
   },
 

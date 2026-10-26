@@ -220,6 +220,7 @@ const studentApplicationSchema = new Schema<IStudentApplicationDocument>(
     studentId: {
       type: Schema.Types.ObjectId,
       ref: 'Student',
+      index: true,
     },
 
     isActive: {

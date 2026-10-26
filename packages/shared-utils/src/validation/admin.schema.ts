@@ -104,8 +104,6 @@ export const approveApplicationSchema = z.object({
   action: z.enum(['approve', 'reject']),
   reviewNotes: z.string().max(500).optional(),
   rejectionReason: z.string().max(500).optional(),
-  hostelId: z.string().optional(),
-  roomId: z.string().optional(),
 }).refine(
   (data) => {
     if (data.action === 'reject' && !data.rejectionReason) {
@@ -262,18 +260,27 @@ export const updateCourseSchema = createCourseSchema.partial().extend({
 
 // ─── Hostel ─────────────────────────────────────────────────────────────────
 
-export const createHostelSchema = z.object({
+const createHostelBaseSchema = z.object({
   name: z.string().min(2, 'Name is required').max(100).trim(),
-  type: z.nativeEnum(HostelType),
+  type: z.nativeEnum(HostelType).default(HostelType.CO_ED),
   wardenId: z.string().optional(),
   chiefWardenId: z.string().optional(),
   address: z.string().max(300).optional(),
-  totalRooms: z.coerce.number().int().positive('Total rooms must be positive'),
-  capacity: z.coerce.number().int().positive('Capacity must be positive'),
+  totalRooms: z.coerce.number().int().positive('Total rooms must be positive').optional(),
+  numberOfRooms: z.coerce.number().int().positive('Number of rooms must be positive').optional(),
+  studentsPerRoom: z.coerce.number().int().refine((value) => [1, 2, 3].includes(value), 'Students per room must be 1, 2, or 3').optional(),
+  // Kept for backwards compatibility with older admin clients. New clients use
+  // studentsPerRoom and capacity is always derived on the server.
+  capacity: z.coerce.number().int().positive('Capacity must be positive').optional(),
   contactNumber: z.string().optional(),
 });
 
-export const updateHostelSchema = createHostelSchema.partial().extend({
+export const createHostelSchema = createHostelBaseSchema.refine((data) => Boolean(data.totalRooms || data.numberOfRooms), {
+  message: 'Number of rooms is required',
+  path: ['totalRooms'],
+});
+
+export const updateHostelSchema = createHostelBaseSchema.partial().extend({
   isActive: z.boolean().optional(),
 });
 

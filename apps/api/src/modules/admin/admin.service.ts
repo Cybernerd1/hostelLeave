@@ -5,17 +5,17 @@
  */
 
 import mongoose from 'mongoose';
-import { UserRole } from '@hostel/shared-types';
+import { UserRole, RoomType } from '@hostel/shared-types';
 
 
 import { User } from '../../models/user.model';
-import { Student } from '../../models/student.model';
+import { Student, type IStudentDocument } from '../../models/student.model';
 import { Parent } from '../../models/parent.model';
 import { Department } from '../../models/department.model';
 import { Course } from '../../models/course.model';
 import { Hostel } from '../../models/hostel.model';
 import { Room } from '../../models/room.model';
-import { StudentApplication } from '../../models/studentApplication.model';
+import { StudentApplication, type IStudentApplicationDocument } from '../../models/studentApplication.model';
 import { RegistrationForm } from '../../models/registrationForm.model';
 import { AllocationHistory } from '../../models/allocationHistory.model';
 import { AuditLog } from '../../models/auditLog.model';
@@ -26,6 +26,36 @@ import { logger } from '../../utils/logger';
 import { generateRandomString } from '@hostel/shared-utils';
 
 import type { PaginationMeta } from '@hostel/shared-types';
+
+type HostelCapacityInput = {
+  name?: unknown;
+  type?: unknown;
+  wardenId?: unknown;
+  chiefWardenId?: unknown;
+  address?: unknown;
+  totalRooms?: unknown;
+  numberOfRooms?: unknown;
+  studentsPerRoom?: unknown;
+  capacity?: unknown;
+  contactNumber?: unknown;
+  isActive?: unknown;
+};
+
+function roomTypeForCapacity(capacity: number): RoomType {
+  if (capacity === 1) return RoomType.SINGLE;
+  if (capacity === 2) return RoomType.DOUBLE;
+  return RoomType.TRIPLE;
+}
+
+function roomNumberForIndex(index: number, prefix?: string): string {
+  const number = String(101 + index);
+  return prefix ? `${prefix}-${number}` : number;
+}
+
+function isTransactionUnsupported(error: unknown): boolean {
+  const candidate = error as { code?: number; message?: string };
+  return candidate?.code === 20 || /transaction[s]? not supported|replica set/i.test(candidate?.message || '');
+}
 
 export class AdminService {
   // ─── Students ─────────────────────────────────────────────────────────────
@@ -151,6 +181,7 @@ export class AdminService {
       .populate('courseId', 'name code')
       .populate('hostelId', 'name type')
       .populate('roomId', 'roomNumber floor type capacity occupied')
+      .populate('allocatedBy', 'name email role')
       .populate('parentId', 'name phone email relation')
       .lean();
   }
@@ -406,6 +437,18 @@ export class AdminService {
     return dept;
   }
 
+  async deleteDepartment(id: string, adminId: string) {
+    const dept = await Department.findById(id);
+    if (!dept) throw AppError.notFound('Department not found');
+    const linkedCourses = await Course.countDocuments({ departmentId: dept._id, isActive: true });
+    const linkedStudents = await Student.countDocuments({ departmentId: dept._id, isActive: true });
+    if (linkedCourses > 0 || linkedStudents > 0) throw AppError.badRequest('Department is in use. Reassign its courses and students first.');
+    dept.isActive = false;
+    await dept.save();
+    await createAuditLog({ userId: adminId, action: 'delete', entity: 'Department', entityId: id, description: `Department ${dept.name} deactivated` });
+    return dept;
+  }
+
   // ─── Courses ──────────────────────────────────────────────────────────────
 
   async createCourse(data: Record<string, unknown>, adminId: string) {
@@ -449,15 +492,187 @@ export class AdminService {
     return course;
   }
 
+  async deleteCourse(id: string, adminId: string) {
+    const course = await Course.findById(id);
+    if (!course) throw AppError.notFound('Course not found');
+    const linkedStudents = await Student.countDocuments({ courseId: course._id, isActive: true });
+    if (linkedStudents > 0) throw AppError.badRequest('Course is assigned to active students. Reassign them first.');
+    course.isActive = false;
+    await course.save();
+    await createAuditLog({ userId: adminId, action: 'delete', entity: 'Course', entityId: id, description: `Course ${course.name} deactivated` });
+    return course;
+  }
+
   // ─── Hostels ──────────────────────────────────────────────────────────────
 
+  private getHostelConfiguration(data: HostelCapacityInput, existing?: { totalRooms?: number; studentsPerRoom?: number; capacity?: number }) {
+    const totalRooms = Number(data.numberOfRooms ?? data.totalRooms ?? existing?.totalRooms ?? 0);
+    if (!Number.isInteger(totalRooms) || totalRooms < 1) {
+      throw AppError.badRequest('Number of rooms must be a positive integer');
+    }
+
+    let studentsPerRoom = data.studentsPerRoom == null
+      ? Number(existing?.studentsPerRoom ?? 0)
+      : Number(data.studentsPerRoom);
+    if (!Number.isInteger(studentsPerRoom) || ![1, 2, 3].includes(studentsPerRoom)) {
+      const legacyCapacity = Number(data.capacity ?? existing?.capacity ?? 0);
+      studentsPerRoom = legacyCapacity > 0 && legacyCapacity % totalRooms === 0
+        ? legacyCapacity / totalRooms
+        : 0;
+    }
+    if (![1, 2, 3].includes(studentsPerRoom)) {
+      throw AppError.badRequest('Students per room must be 1, 2, or 3');
+    }
+
+    return { totalRooms, studentsPerRoom: studentsPerRoom as 1 | 2 | 3, capacity: totalRooms * studentsPerRoom };
+  }
+
+  private async getRoomPrefix(): Promise<string | undefined> {
+    const existingRoom = await Room.findOne({ roomNumber: /^([A-Za-z]+)-\d+$/ }).select('roomNumber').lean();
+    const match = existingRoom?.roomNumber.match(/^([A-Za-z]+)-\d+$/);
+    return match?.[1];
+  }
+
+  private async generateRooms(
+    hostelId: mongoose.Types.ObjectId,
+    startIndex: number,
+    count: number,
+    capacity: number,
+    prefix?: string,
+  ) {
+    if (count <= 0) return;
+    const operations = Array.from({ length: count }, (_, offset) => {
+      const index = startIndex + offset;
+      const roomNumber = roomNumberForIndex(index, prefix);
+      return {
+        updateOne: {
+          filter: { hostelId, roomNumber },
+          update: {
+            $setOnInsert: {
+              roomNumber,
+              hostelId,
+              floor: String(Math.floor(index / 10) + 1),
+              capacity,
+              occupied: 0,
+              type: roomTypeForCapacity(capacity),
+              isActive: true,
+            },
+          },
+          upsert: true,
+        },
+      };
+    });
+    await Room.bulkWrite(operations, { ordered: true });
+  }
+
+  private async getHostelStatistics(hostelIds: mongoose.Types.ObjectId[]) {
+    if (hostelIds.length === 0) return new Map<string, { totalRooms: number; capacity: number; occupied: number; fullyOccupiedRooms: number }>();
+
+    const roomStats = await Room.aggregate([
+      { $match: { hostelId: { $in: hostelIds }, isActive: true } },
+      { $group: { _id: '$hostelId', totalRooms: { $sum: 1 }, capacity: { $sum: '$capacity' } } },
+    ]);
+    const occupancyStats = await Student.aggregate([
+      { $match: { isActive: true, hostelId: { $in: hostelIds }, roomId: { $exists: true, $ne: null } } },
+      { $group: { _id: { hostelId: '$hostelId', roomId: '$roomId' }, occupied: { $sum: 1 } } },
+      { $group: { _id: '$_id.hostelId', occupied: { $sum: '$occupied' } } },
+    ]);
+    const fullRoomStats = await Room.aggregate([
+      { $match: { hostelId: { $in: hostelIds }, isActive: true } },
+      {
+        $lookup: {
+          from: 'students',
+          let: { roomId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $and: [
+              { $eq: ['$roomId', '$$roomId'] },
+              { $eq: ['$isActive', true] },
+            ] } } },
+            { $count: 'count' },
+          ],
+          as: 'occupancy',
+        },
+      },
+      { $addFields: { occupiedSeats: { $ifNull: [{ $arrayElemAt: ['$occupancy.count', 0] }, 0] } } },
+      { $match: { $expr: { $gte: ['$occupiedSeats', '$capacity'] } } },
+      { $group: { _id: '$hostelId', fullyOccupiedRooms: { $sum: 1 } } },
+    ]);
+
+    const result = new Map<string, { totalRooms: number; capacity: number; occupied: number; fullyOccupiedRooms: number }>();
+    for (const item of roomStats) {
+      result.set(String(item._id), { totalRooms: item.totalRooms, capacity: item.capacity, occupied: 0, fullyOccupiedRooms: 0 });
+    }
+    for (const item of occupancyStats) {
+      const stats = result.get(String(item._id));
+      if (stats) stats.occupied = item.occupied;
+    }
+    for (const item of fullRoomStats) {
+      const stats = result.get(String(item._id));
+      if (stats) stats.fullyOccupiedRooms = item.fullyOccupiedRooms;
+    }
+    return result;
+  }
+
+  private async formatHostels(hostels: Array<Record<string, any>>): Promise<Array<Record<string, any>>> {
+    const stats = await this.getHostelStatistics(hostels.map((hostel) => new mongoose.Types.ObjectId(String(hostel._id))));
+    return hostels.map((hostel) => {
+      const item = stats.get(String(hostel._id)) || { totalRooms: 0, capacity: 0, occupied: 0, fullyOccupiedRooms: 0 };
+      const availableSeats = Math.max(item.capacity - item.occupied, 0);
+      return {
+        ...hostel,
+        totalRooms: item.totalRooms,
+        capacity: item.capacity,
+        occupiedSeats: item.occupied,
+        occupancy: item.occupied,
+        availableSeats,
+        fullyOccupiedRooms: item.fullyOccupiedRooms,
+        occupancyPercentage: item.capacity ? Math.round((item.occupied / item.capacity) * 10000) / 100 : 0,
+      };
+    });
+  }
+
+  private async assertHostelScope(hostel: { wardenId?: mongoose.Types.ObjectId }, actorId: string, actorRole: UserRole) {
+    if (actorRole === UserRole.WARDEN && String(hostel.wardenId || '') !== actorId) {
+      throw AppError.forbidden('You are not authorized to manage this hostel');
+    }
+  }
+
   async createHostel(data: Record<string, unknown>, adminId: string) {
-    const hostel = await Hostel.create(data);
+    const config = this.getHostelConfiguration(data);
+    const name = String(data.name || '').trim();
+    const existing = await Hostel.findOne({ name: { $regex: `^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } });
+    if (existing) throw AppError.conflict('A hostel with this name already exists');
+
+    let hostel;
+    try {
+      hostel = await Hostel.create({
+        ...data,
+        name,
+        normalizedName: name.toLocaleLowerCase().trim(),
+        totalRooms: config.totalRooms,
+        studentsPerRoom: config.studentsPerRoom,
+        capacity: config.capacity,
+        occupancy: 0,
+      });
+    } catch (error) {
+      if ((error as { code?: number }).code === 11000) throw AppError.conflict('A hostel with this name already exists');
+      throw error;
+    }
+
+    try {
+      await this.generateRooms(hostel._id, 0, config.totalRooms, config.studentsPerRoom, await this.getRoomPrefix());
+    } catch (error) {
+      await Room.deleteMany({ hostelId: hostel._id });
+      await Hostel.deleteOne({ _id: hostel._id });
+      throw error;
+    }
+
     await createAuditLog({
       userId: adminId, action: 'create', entity: 'Hostel',
-      entityId: hostel._id.toString(), description: `Hostel ${data.name} created`,
+      entityId: hostel._id.toString(), description: `Hostel ${name} created with ${config.totalRooms} rooms`,
     });
-    return hostel;
+    const formatted = await this.formatHostels([hostel.toObject()]);
+    return formatted[0];
   }
 
   async getHostels(query: { page: number; limit: number; search?: string }) {
@@ -467,7 +682,7 @@ export class AdminService {
     }
 
     const total = await Hostel.countDocuments(filter);
-    const data = await Hostel.find(filter)
+    const hostels = await Hostel.find(filter)
       .sort({ name: 1 })
       .skip((query.page - 1) * query.limit)
       .limit(query.limit)
@@ -475,18 +690,65 @@ export class AdminService {
       .populate('chiefWardenId', 'name email')
       .lean();
 
+    const data = await this.formatHostels(hostels as Array<Record<string, any>>);
     return { data, pagination: buildPaginationMeta(query.page, query.limit, total) };
   }
 
   async updateHostel(id: string, data: Record<string, unknown>, adminId: string) {
-    const hostel = await Hostel.findByIdAndUpdate(id, data, { new: true, runValidators: true });
-    if (!hostel) { throw AppError.notFound('Hostel not found'); }
+    const hostel = await Hostel.findById(id);
+    if (!hostel) throw AppError.notFound('Hostel not found');
+    const config = this.getHostelConfiguration(data, hostel);
+    if (data.name && String(data.name).trim().toLowerCase() !== hostel.name.toLowerCase()) {
+      const duplicate = await Hostel.findOne({ _id: { $ne: hostel._id }, name: { $regex: `^${String(data.name).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } });
+      if (duplicate) throw AppError.conflict('A hostel with this name already exists');
+      hostel.name = String(data.name).trim();
+      hostel.normalizedName = hostel.name.toLocaleLowerCase();
+    }
+
+    const allRooms = await Room.find({ hostelId: hostel._id }).sort({ roomNumber: 1 });
+    const activeRooms = allRooms.filter((room) => room.isActive);
+    const actualOccupancy = await Student.aggregate([
+      { $match: { isActive: true, hostelId: hostel._id, roomId: { $exists: true, $ne: null } } },
+      { $group: { _id: '$roomId', occupied: { $sum: 1 } } },
+    ]);
+    const occupiedByRoom = new Map(actualOccupancy.map((item) => [String(item._id), item.occupied as number]));
+    if (config.studentsPerRoom !== hostel.studentsPerRoom) {
+      const overCapacity = actualOccupancy.some((item) => item.occupied > config.studentsPerRoom);
+      if (overCapacity) throw AppError.badRequest('Students per room cannot be reduced below current occupancy');
+    }
+
+    if (config.totalRooms < activeRooms.length) {
+      const roomsToDeactivate = activeRooms.slice(config.totalRooms).filter((room) => (occupiedByRoom.get(String(room._id)) || 0) > 0);
+      if (roomsToDeactivate.length) throw AppError.badRequest('Occupied rooms cannot be removed from a hostel');
+      await Room.updateMany(
+        { _id: { $in: activeRooms.slice(config.totalRooms).map((room) => room._id) } },
+        { $set: { isActive: false } },
+      );
+    } else if (config.totalRooms > activeRooms.length) {
+      await this.generateRooms(hostel._id, allRooms.length, config.totalRooms - activeRooms.length, config.studentsPerRoom, await this.getRoomPrefix());
+    }
+
+    await Room.updateMany(
+      { hostelId: hostel._id, isActive: true },
+      { $set: { capacity: config.studentsPerRoom, type: roomTypeForCapacity(config.studentsPerRoom) } },
+    );
+    hostel.totalRooms = config.totalRooms;
+    hostel.studentsPerRoom = config.studentsPerRoom;
+    hostel.capacity = config.capacity;
+    if (data.type !== undefined) hostel.type = data.type as typeof hostel.type;
+    if (data.wardenId !== undefined) hostel.wardenId = data.wardenId ? new mongoose.Types.ObjectId(String(data.wardenId)) : undefined;
+    if (data.chiefWardenId !== undefined) hostel.chiefWardenId = data.chiefWardenId ? new mongoose.Types.ObjectId(String(data.chiefWardenId)) : undefined;
+    if (data.address !== undefined) hostel.address = data.address as string;
+    if (data.contactNumber !== undefined) hostel.contactNumber = data.contactNumber as string;
+    if (data.isActive !== undefined) hostel.isActive = Boolean(data.isActive);
+    await hostel.save();
 
     await createAuditLog({
       userId: adminId, action: 'update', entity: 'Hostel',
       entityId: id, description: `Hostel ${hostel.name} updated`,
     });
-    return hostel;
+    const formatted = await this.formatHostels([hostel.toObject()]);
+    return formatted[0];
   }
 
   async assignWardenToHostel(hostelId: string, wardenUserId: string | null, actorId: string) {
@@ -526,15 +788,55 @@ export class AdminService {
   // ─── Rooms ────────────────────────────────────────────────────────────────
 
   async createRoom(data: Record<string, unknown>, adminId: string) {
-    const room = await Room.create(data);
+    const hostel = await Hostel.findById(data.hostelId);
+    if (!hostel) throw AppError.notFound('Hostel not found');
+    const capacity = Number(data.capacity);
+    if (![1, 2, 3].includes(capacity)) throw AppError.badRequest('Room capacity must be 1, 2, or 3');
+    const room = await Room.create({
+      ...data,
+      capacity,
+      type: data.type || roomTypeForCapacity(capacity),
+      occupied: 0,
+    });
     await createAuditLog({
       userId: adminId, action: 'create', entity: 'Room',
       entityId: room._id.toString(), description: `Room ${data.roomNumber} created`,
     });
-    return room;
+    return this.formatRooms([room.toObject()]).then((rooms) => rooms[0]);
   }
 
-  async getRooms(query: { page: number; limit: number; hostelId?: string; search?: string }) {
+  private async formatRooms(rooms: Array<Record<string, any>>): Promise<Array<Record<string, any>>> {
+    if (rooms.length === 0) return [];
+    const roomIds = rooms.map((room) => new mongoose.Types.ObjectId(String(room._id)));
+    const occupancy = await Student.aggregate([
+      { $match: { isActive: true, roomId: { $in: roomIds } } },
+      { $group: { _id: '$roomId', occupied: { $sum: 1 } } },
+    ]);
+    const occupiedByRoom = new Map(occupancy.map((item) => [String(item._id), item.occupied as number]));
+    const students = await Student.find({ isActive: true, roomId: { $in: roomIds } })
+      .select('name rollNumber studentNumber userId hostelId roomId')
+      .populate('userId', 'email')
+      .lean();
+    const studentsByRoom = new Map<string, Array<Record<string, unknown>>>();
+    for (const student of students) {
+      const key = String(student.roomId);
+      const roomStudents = studentsByRoom.get(key) || [];
+      roomStudents.push({
+        _id: student._id,
+        name: student.name,
+        rollNumber: student.rollNumber,
+        studentNumber: student.studentNumber,
+        email: (student.userId as unknown as { email?: string })?.email,
+      });
+      studentsByRoom.set(key, roomStudents);
+    }
+    return rooms.map((room) => {
+      const occupied = occupiedByRoom.get(String(room._id)) || 0;
+      return { ...room, occupied, availableSeats: Math.max(room.capacity - occupied, 0), occupancyStatus: occupied === 0 ? 'Available' : occupied >= room.capacity ? 'Full' : 'Partially Occupied', students: studentsByRoom.get(String(room._id)) || [] };
+    });
+  }
+
+  async getRooms(query: { page: number; limit: number; hostelId?: string; search?: string; availability?: string }) {
     const filter: Record<string, unknown> = {};
     if (query.hostelId) { filter.hostelId = query.hostelId; }
     if (query.search) {
@@ -542,25 +844,105 @@ export class AdminService {
     }
 
     const total = await Room.countDocuments(filter);
-    const data = await Room.find(filter)
+    const rooms = await Room.find(filter)
       .sort({ roomNumber: 1 })
       .skip((query.page - 1) * query.limit)
       .limit(query.limit)
       .populate('hostelId', 'name')
       .lean();
 
+    let data = await this.formatRooms(rooms as Array<Record<string, any>>);
+    if (query.availability === 'available') data = data.filter((room) => room.isActive && room.availableSeats > 0);
+    if (query.availability === 'full') data = data.filter((room) => room.isActive && room.availableSeats === 0);
     return { data, pagination: buildPaginationMeta(query.page, query.limit, total) };
   }
 
+  async getHostelRooms(hostelId: string, actorId: string, actorRole: UserRole, onlyAvailable = false, search?: string) {
+    const hostel = await Hostel.findById(hostelId).lean();
+    if (!hostel) throw AppError.notFound('Hostel not found');
+    await this.assertHostelScope(hostel, actorId, actorRole);
+    const filter: Record<string, unknown> = { hostelId: hostel._id };
+    if (onlyAvailable) filter.isActive = true;
+    if (search) filter.roomNumber = { $regex: search, $options: 'i' };
+    const rooms = await Room.find(filter).sort({ roomNumber: 1 }).populate('hostelId', 'name').lean();
+    const formatted = await this.formatRooms(rooms as Array<Record<string, any>>);
+    return onlyAvailable ? formatted.filter((room) => room.availableSeats > 0) : formatted;
+  }
+
+  async getAvailableHostels(actorId: string, actorRole: UserRole) {
+    const filter: Record<string, unknown> = { isActive: true };
+    if (actorRole === UserRole.WARDEN) filter.wardenId = actorId;
+    const hostels = await Hostel.find(filter).sort({ name: 1 }).lean();
+    const formatted = await this.formatHostels(hostels as Array<Record<string, any>>);
+    return formatted
+      .filter((hostel) => hostel.availableSeats > 0)
+      .map((hostel) => ({
+        _id: hostel._id,
+        name: hostel.name,
+        type: hostel.type,
+        roomsAvailable: hostel.totalRooms - hostel.fullyOccupiedRooms,
+        seatsRemaining: hostel.availableSeats,
+      }));
+  }
+
+  async getAvailableRooms(hostelId: string, actorId: string, actorRole: UserRole) {
+    return this.getHostelRooms(hostelId, actorId, actorRole, true);
+  }
+
   async updateRoom(id: string, data: Record<string, unknown>, adminId: string) {
-    const room = await Room.findByIdAndUpdate(id, data, { new: true, runValidators: true });
-    if (!room) { throw AppError.notFound('Room not found'); }
+    const room = await Room.findById(id);
+    if (!room) throw AppError.notFound('Room not found');
+    if (data.capacity !== undefined) {
+      const capacity = Number(data.capacity);
+      if (![1, 2, 3].includes(capacity)) throw AppError.badRequest('Room capacity must be 1, 2, or 3');
+      const occupied = await Student.countDocuments({ isActive: true, roomId: room._id });
+      if (occupied > capacity) throw AppError.badRequest('Room capacity cannot be less than current occupancy');
+      room.capacity = capacity;
+      room.type = roomTypeForCapacity(capacity);
+    }
+    if (data.roomNumber !== undefined) room.roomNumber = String(data.roomNumber);
+    if (data.floor !== undefined) room.floor = String(data.floor);
+    if (data.isActive !== undefined) room.isActive = Boolean(data.isActive);
+    await room.save();
 
     await createAuditLog({
       userId: adminId, action: 'update', entity: 'Room',
       entityId: id, description: `Room ${room.roomNumber} updated`,
     });
-    return room;
+    return this.formatRooms([room.toObject()]).then((rooms) => rooms[0]);
+  }
+
+  async deleteRoom(id: string, actorId: string) {
+    const room = await Room.findById(id);
+    if (!room) throw AppError.notFound('Room not found');
+    const activeStudents = await Student.countDocuments({ isActive: true, roomId: room._id });
+    if (activeStudents > 0) throw AppError.badRequest('Room has allocated students. Remove or transfer them before deleting it.');
+    const historyCount = await AllocationHistory.countDocuments({ roomId: room._id });
+    if (historyCount > 0) throw AppError.badRequest('Room has allocation history. Mark it unavailable instead of deleting it.');
+    await Room.deleteOne({ _id: room._id });
+    await createAuditLog({ userId: actorId, action: 'delete', entity: 'Room', entityId: id, description: `Room ${room.roomNumber} deleted` });
+    return { deleted: true, id };
+  }
+
+  async deleteHostel(id: string, actorId: string) {
+    const hostel = await Hostel.findById(id);
+    if (!hostel) throw AppError.notFound('Hostel not found');
+    const activeStudents = await Student.countDocuments({ isActive: true, hostelId: hostel._id });
+    if (activeStudents > 0) throw AppError.badRequest('Hostel has allocated students. Remove or transfer them before deleting it.');
+    const roomIds = await Room.find({ hostelId: hostel._id }).distinct('_id');
+    const historyCount = await AllocationHistory.countDocuments({ $or: [{ hostelId: hostel._id }, { roomId: { $in: roomIds } }] });
+    if (historyCount > 0) throw AppError.badRequest('Hostel has allocation history. Mark it unavailable instead of deleting it.');
+    await Room.deleteMany({ hostelId: hostel._id });
+    await Hostel.deleteOne({ _id: hostel._id });
+    await createAuditLog({ userId: actorId, action: 'delete', entity: 'Hostel', entityId: id, description: `Hostel ${hostel.name} deleted` });
+    return { deleted: true, id };
+  }
+
+  async getAllocationCandidates() {
+    return Student.find({ isActive: true, applicationStatus: { $in: ['approved', 'allocated'] } })
+      .select('name rollNumber studentNumber gender applicationStatus hostelId roomId')
+      .sort({ name: 1 })
+      .lean();
   }
 
   // ─── Staff (Warden, Chief Warden, HOD, Guard, VC) ─────────────────────────
@@ -641,36 +1023,70 @@ export class AdminService {
       totalParents,
       totalDepartments,
       totalHostels,
-      totalRooms,
       totalApplications,
       pendingApplications,
       approvedApplications,
       rejectedApplications,
       allocatedStudents,
+      roomSummary,
+      awaitingStudents,
     ] = await Promise.all([
       Student.countDocuments({ isActive: true }),
       Parent.countDocuments({ isActive: true }),
       Department.countDocuments({ isActive: true }),
       Hostel.countDocuments({ isActive: true }),
-      Room.countDocuments({ isActive: true }),
       StudentApplication.countDocuments({}),
       StudentApplication.countDocuments({ status: 'pending' }),
       StudentApplication.countDocuments({ status: 'approved' }),
       StudentApplication.countDocuments({ status: 'rejected' }),
-      Student.countDocuments({ hostelId: { $exists: true, $ne: null }, isActive: true }),
+      Student.countDocuments({ roomId: { $exists: true, $ne: null }, isActive: true }),
+      Room.aggregate([
+        { $match: { isActive: true } },
+        {
+          $lookup: {
+            from: 'students',
+            let: { roomId: '$_id' },
+            pipeline: [
+              { $match: { $expr: { $and: [
+                { $eq: ['$roomId', '$$roomId'] },
+                { $eq: ['$isActive', true] },
+              ] } } },
+              { $count: 'count' },
+            ],
+            as: 'occupancy',
+          },
+        },
+        { $addFields: { occupiedSeats: { $ifNull: [{ $arrayElemAt: ['$occupancy.count', 0] }, 0] } } },
+        { $group: {
+          _id: null,
+          totalRooms: { $sum: 1 },
+          totalBedCapacity: { $sum: '$capacity' },
+          occupiedSeats: { $sum: '$occupiedSeats' },
+          fullyOccupiedRooms: { $sum: { $cond: [{ $gte: ['$occupiedSeats', '$capacity'] }, 1, 0] } },
+        } },
+      ]),
+      Student.countDocuments({ isActive: true, applicationStatus: 'approved', $or: [{ roomId: { $exists: false } }, { roomId: null }] }),
     ]);
+
+    const summary = roomSummary[0] || { totalRooms: 0, totalBedCapacity: 0, occupiedSeats: 0, fullyOccupiedRooms: 0 };
+    const awaitingApplications = await StudentApplication.countDocuments({ status: 'approved', studentId: { $exists: false } });
 
     return {
       totalStudents,
       totalParents,
       totalDepartments,
       totalHostels,
-      totalRooms,
+      totalRooms: summary.totalRooms,
+      totalBedCapacity: summary.totalBedCapacity,
+      occupiedSeats: summary.occupiedSeats,
+      availableSeats: Math.max(summary.totalBedCapacity - summary.occupiedSeats, 0),
+      fullyOccupiedRooms: summary.fullyOccupiedRooms,
       totalApplications,
       pendingApplications,
       approvedApplications,
       rejectedApplications,
       allocatedStudents,
+      studentsAwaitingAllocation: awaitingStudents + awaitingApplications,
     };
   }
 
@@ -990,7 +1406,7 @@ export class AdminService {
 
   async approveRejectApplication(
     id: string,
-    data: { action: 'approve' | 'reject'; reviewNotes?: string; rejectionReason?: string; hostelId?: string; roomId?: string },
+    data: { action: 'approve' | 'reject'; reviewNotes?: string; rejectionReason?: string },
     actorId: string
   ) {
     const application = await StudentApplication.findById(id);
@@ -1021,11 +1437,10 @@ export class AdminService {
       application.reviewedBy = new mongoose.Types.ObjectId(actorId);
       application.reviewedAt = new Date();
       application.reviewNotes = data.reviewNotes;
-
-      // If hostel and room are provided, allocate immediately
-      if (data.hostelId && data.roomId) {
-        await this.allocateRoomToApplication(application, data.hostelId, data.roomId, actorId, data.reviewNotes);
-      }
+      // Approval and allocation are deliberately separate operations. Create
+      // the student profile now, but do not reserve a bed until an allocator
+      // confirms a room through the allocation endpoint.
+      await this.ensureStudentProfile(application);
     }
 
     await application.save();
@@ -1044,150 +1459,355 @@ export class AdminService {
     return application;
   }
 
-  private async allocateRoomToApplication(
-    application: any,
-    hostelId: string,
-    roomId: string,
-    actorId: string,
-    notes?: string
-  ) {
-    const hostel = await Hostel.findById(hostelId);
-    if (!hostel) throw AppError.notFound('Hostel not found');
-    if (!hostel.isActive) throw AppError.badRequest('Hostel is not active');
+  // ─── Hostel and Room Allocation ─────────────────────────────────────────
 
-    const room = await Room.findById(roomId);
-    if (!room) throw AppError.notFound('Room not found');
-    if (!room.isActive) throw AppError.badRequest('Room is not active');
-    if (String(room.hostelId) !== String(hostel._id)) throw AppError.badRequest('Room does not belong to this hostel');
-    if (room.occupied >= room.capacity) throw AppError.badRequest('Room is at full capacity');
-
-    // Gender compatibility check
-    if (hostel.type === 'boys' && application.gender !== 'male') {
-      throw AppError.badRequest(`${hostel.name} is a boys' hostel`);
-    }
-    if (hostel.type === 'girls' && application.gender !== 'female') {
-      throw AppError.badRequest(`${hostel.name} is a girls' hostel`);
+  private async ensureStudentProfile(application: IStudentApplicationDocument) {
+    if (application.studentId) {
+      return Student.findById(application.studentId);
     }
 
-    // Use transaction-like safety with session
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    try {
-      application.hostelId = new mongoose.Types.ObjectId(hostelId);
-      application.roomId = new mongoose.Types.ObjectId(roomId);
-      application.status = 'allocated';
-      application.allocatedAt = new Date();
-      application.allocatedBy = new mongoose.Types.ObjectId(actorId);
-      await application.save({ session });
+    let user = await User.findOne({ email: application.email });
+    if (user && user.role !== UserRole.STUDENT) {
+      throw AppError.conflict('An account with the application email already exists');
+    }
+    if (!user) {
+      user = await User.create({
+        email: application.email,
+        password: `Temp@${generateRandomString(12)}`,
+        role: UserRole.STUDENT,
+        name: application.fullName,
+        phone: application.phoneNumber,
+        isActive: true,
+      });
+    }
 
-      await Room.findByIdAndUpdate(roomId, { $inc: { occupied: 1 } }, { session });
-      await Hostel.findByIdAndUpdate(hostelId, { $inc: { occupancy: 1 } }, { session });
-
-      await AllocationHistory.create([{
-        studentId: application._id,
+    let student = await Student.findOne({ userId: user._id });
+    if (!student) {
+      student = await Student.create({
+        userId: user._id,
+        rollNumber: application.studentNumber,
         studentNumber: application.studentNumber,
-        studentName: application.fullName,
-        action: 'allocate',
-        hostelId,
-        roomId,
-        reason: notes || 'Room allocated upon approval',
-        allocatedBy: actorId,
-        allocatedAt: new Date(),
-      }], { session });
+        name: application.fullName,
+        phone: application.phoneNumber,
+        gender: application.gender,
+        dateOfBirth: application.dateOfBirth,
+        address: application.residentialAddress,
+        city: application.city,
+        state: application.guardianState || application.city,
+        pincode: application.guardianPincode || '000000',
+        departmentId: application.departmentId,
+        courseId: application.courseId,
+        year: application.yearOfStudy,
+        semester: application.semester,
+        admissionYear: application.admissionYear,
+        admissionNumber: application.admissionNumber,
+        academicSession: application.academicSession,
+        bloodGroup: application.bloodGroup,
+        fatherName: application.fatherName,
+        fatherEmail: application.fatherEmail,
+        fatherPhone: application.fatherPhone,
+        motherName: application.motherName,
+        motherEmail: application.motherEmail,
+        motherPhone: application.motherPhone,
+        guardianAddressLine1: application.guardianAddressLine1,
+        guardianAddressLine2: application.guardianAddressLine2,
+        guardianCity: application.guardianCity,
+        guardianState: application.guardianState,
+        guardianPincode: application.guardianPincode,
+        guardianCountry: application.guardianCountry,
+        applicationStatus: 'approved',
+        allocationStatus: 'none',
+        isActive: true,
+      });
+    } else if (!student.roomId) {
+      student.applicationStatus = 'approved';
+      student.allocationStatus = 'none';
+      await student.save();
+    }
+    application.userId = user._id;
+    application.studentId = student._id;
+    return student;
+  }
 
-      await session.commitTransaction();
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
+  private async reconcileOccupancy(roomId?: mongoose.Types.ObjectId, hostelId?: mongoose.Types.ObjectId) {
+    if (roomId) {
+      const occupied = await Student.countDocuments({ isActive: true, roomId });
+      await Room.updateOne({ _id: roomId }, { $set: { occupied } });
+    }
+    if (hostelId) {
+      const occupancy = await Student.countDocuments({ isActive: true, hostelId, roomId: { $exists: true, $ne: null } });
+      await Hostel.updateOne({ _id: hostelId }, { $set: { occupancy } });
     }
   }
 
-  // ─── Hostel and Room Allocation ─────────────────────────────────────────
-
-  async allocateRoom(studentId: string, data: { hostelId: string; roomId: string; reason: string }, actorId: string) {
-    const student = await Student.findById(studentId);
-    if (!student) {
-      throw AppError.notFound('Student not found');
+  private async assertAllocationTarget(
+    data: { hostelId: string; roomId: string },
+    actorId: string,
+    actorRole: UserRole,
+    gender: string,
+  ) {
+    if (!mongoose.isValidObjectId(data.hostelId) || !mongoose.isValidObjectId(data.roomId)) {
+      throw AppError.badRequest('Invalid hostel or room');
     }
-
     const hostel = await Hostel.findById(data.hostelId);
     if (!hostel) throw AppError.notFound('Hostel not found');
     if (!hostel.isActive) throw AppError.badRequest('Hostel is not active');
+    await this.assertHostelScope(hostel, actorId, actorRole);
+    const room = await Room.findOne({ _id: data.roomId, hostelId: hostel._id, isActive: true });
+    if (!room) throw AppError.badRequest('Room is not active or does not belong to this hostel');
+    if (hostel.type === 'boys' && gender !== 'male') throw AppError.badRequest(`${hostel.name} is a boys' hostel`);
+    if (hostel.type === 'girls' && gender !== 'female') throw AppError.badRequest(`${hostel.name} is a girls' hostel`);
+    return { hostel, room };
+  }
 
-    const room = await Room.findById(data.roomId);
-    if (!room) throw AppError.notFound('Room not found');
-    if (!room.isActive) throw AppError.badRequest('Room is not active');
-    if (String(room.hostelId) !== String(hostel._id)) throw AppError.badRequest('Room does not belong to this hostel');
-    if (room.occupied >= room.capacity) throw AppError.badRequest('Room is at full capacity');
-
-    // Gender compatibility
-    if (hostel.type === 'boys' && student.gender !== 'male') {
-      throw AppError.badRequest(`${hostel.name} is a boys' hostel`);
-    }
-    if (hostel.type === 'girls' && student.gender !== 'female') {
-      throw AppError.badRequest(`${hostel.name} is a girls' hostel`);
-    }
-
+  private async allocateWithoutTransaction(
+    student: IStudentDocument,
+    application: IStudentApplicationDocument | null,
+    data: { hostelId: string; roomId: string; reason: string },
+    actorId: string,
+  ) {
     const previousHostelId = student.hostelId;
     const previousRoomId = student.roomId;
+    const now = new Date();
+    const reserved = await Room.findOneAndUpdate(
+      { _id: data.roomId, isActive: true, $expr: { $lt: ['$occupied', '$capacity'] } },
+      { $inc: { occupied: 1 } },
+      { new: true },
+    );
+    if (!reserved) throw AppError.badRequest('The selected room has no seats remaining');
 
-    // If already allocated to same hostel and room
-    if (previousHostelId && String(previousHostelId) === String(data.hostelId) &&
-        previousRoomId && String(previousRoomId) === String(data.roomId)) {
-      throw AppError.badRequest('Student is already allocated to this hostel and room');
-    }
-
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    let studentUpdated = false;
+    let previousRoomReleased = false;
+    let previousHostelReleased = false;
+    let newHostelIncremented = false;
+    const previousApplication = application ? {
+      status: application.status,
+      hostelId: application.hostelId,
+      roomId: application.roomId,
+      allocatedAt: application.allocatedAt,
+      allocatedBy: application.allocatedBy,
+    } : null;
     try {
-      // Decrement old allocation
+      const currentStudentFilter: Record<string, unknown> = { _id: student._id, applicationStatus: { $in: ['approved', 'allocated'] } };
+      currentStudentFilter.roomId = previousRoomId || { $exists: false };
+      const updatedStudent = await Student.findOneAndUpdate(currentStudentFilter, {
+        $set: { hostelId: data.hostelId, roomId: data.roomId, applicationStatus: 'allocated', allocationStatus: 'active', allocatedAt: now, allocatedBy: actorId },
+      }, { new: true, runValidators: true });
+      if (!updatedStudent) throw AppError.conflict('The student allocation changed. Refresh and try again');
+      studentUpdated = true;
       if (previousRoomId) {
-        await Room.findByIdAndUpdate(previousRoomId, { $inc: { occupied: -1 } }, { session });
-        await Hostel.findByIdAndUpdate(previousHostelId, { $inc: { occupancy: -1 } }, { session });
+        await Room.updateOne({ _id: previousRoomId, occupied: { $gt: 0 } }, { $inc: { occupied: -1 } });
+        previousRoomReleased = true;
       }
+      if (previousHostelId) {
+        await Hostel.updateOne({ _id: previousHostelId, occupancy: { $gt: 0 } }, { $inc: { occupancy: -1 } });
+        previousHostelReleased = true;
+      }
+      await Hostel.updateOne({ _id: data.hostelId }, { $inc: { occupancy: 1 } });
+      newHostelIncremented = true;
+      if (application) {
+        const applicationResult = await StudentApplication.updateOne({ _id: application._id, status: { $in: ['approved', 'allocated'] } }, { $set: { hostelId: data.hostelId, roomId: data.roomId, status: 'allocated', allocatedAt: now, allocatedBy: actorId } });
+        if (application.status === 'approved' && applicationResult.matchedCount === 0) throw AppError.conflict('The application allocation changed. Refresh and try again');
+      }
+      await AllocationHistory.updateMany({ studentId: student._id, status: 'active' }, { $set: { status: 'transferred' } });
+      await AllocationHistory.create({ studentId: student._id, studentNumber: student.rollNumber, studentName: student.name, action: previousRoomId ? 'transfer' : 'allocate', previousHostelId, previousRoomId, hostelId: data.hostelId, roomId: data.roomId, reason: data.reason, allocatedBy: actorId, allocatedAt: now, status: 'active' });
+    } catch (error) {
+      await Room.updateOne({ _id: data.roomId, occupied: { $gt: 0 } }, { $inc: { occupied: -1 } });
+      if (previousRoomReleased && previousRoomId) await Room.updateOne({ _id: previousRoomId }, { $inc: { occupied: 1 } });
+      if (previousHostelReleased && previousHostelId) await Hostel.updateOne({ _id: previousHostelId }, { $inc: { occupancy: 1 } });
+      if (newHostelIncremented) await Hostel.updateOne({ _id: data.hostelId, occupancy: { $gt: 0 } }, { $inc: { occupancy: -1 } });
+      if (studentUpdated) {
+        const rollback: Record<string, Record<string, unknown>> = {
+          $set: { applicationStatus: previousRoomId ? 'allocated' : 'approved', allocationStatus: previousRoomId ? 'active' : 'none' },
+        };
+        if (previousRoomId) {
+          rollback.$set.hostelId = previousHostelId;
+          rollback.$set.roomId = previousRoomId;
+        } else {
+          rollback.$unset = { roomId: 1, hostelId: 1 };
+        }
+        await Student.updateOne({ _id: student._id, roomId: data.roomId }, rollback);
+      }
+      if (application && previousApplication) {
+        const applicationRollback: Record<string, Record<string, unknown>> = { $set: { status: previousApplication.status } };
+        const unset: Record<string, number> = {};
+        if (previousApplication.hostelId) applicationRollback.$set.hostelId = previousApplication.hostelId;
+        else unset.hostelId = 1;
+        if (previousApplication.roomId) applicationRollback.$set.roomId = previousApplication.roomId;
+        else unset.roomId = 1;
+        if (previousApplication.allocatedAt) applicationRollback.$set.allocatedAt = previousApplication.allocatedAt;
+        else unset.allocatedAt = 1;
+        if (previousApplication.allocatedBy) applicationRollback.$set.allocatedBy = previousApplication.allocatedBy;
+        else unset.allocatedBy = 1;
+        if (Object.keys(unset).length) applicationRollback.$unset = unset;
+        await StudentApplication.updateOne({ _id: application._id, roomId: data.roomId }, applicationRollback);
+      }
+      throw error;
+    }
+    return Student.findById(student._id).populate('hostelId', 'name type').populate('roomId', 'roomNumber floor type capacity').lean();
+  }
 
-      // Assign new allocation
-      student.hostelId = new mongoose.Types.ObjectId(data.hostelId);
-      student.roomId = new mongoose.Types.ObjectId(data.roomId);
-      student.applicationStatus = 'allocated';
-      await student.save({ session });
+  private async allocateWithTransaction(
+    student: IStudentDocument,
+    application: IStudentApplicationDocument | null,
+    data: { hostelId: string; roomId: string; reason: string },
+    actorId: string,
+  ) {
+    const previousHostelId = student.hostelId;
+    const previousRoomId = student.roomId;
+    const now = new Date();
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+      const reserved = await Room.findOneAndUpdate(
+        { _id: data.roomId, isActive: true, $expr: { $lt: ['$occupied', '$capacity'] } },
+        { $inc: { occupied: 1 } },
+        { new: true, session },
+      );
+      if (!reserved) throw AppError.badRequest('The selected room has no seats remaining');
+      if (previousRoomId) await Room.updateOne({ _id: previousRoomId, occupied: { $gt: 0 } }, { $inc: { occupied: -1 } }, { session });
+      if (previousHostelId) await Hostel.updateOne({ _id: previousHostelId, occupancy: { $gt: 0 } }, { $inc: { occupancy: -1 } }, { session });
+      await Hostel.updateOne({ _id: data.hostelId }, { $inc: { occupancy: 1 } }, { session });
 
-      // Increment new allocation
-      await Room.findByIdAndUpdate(data.roomId, { $inc: { occupied: 1 } }, { session });
-      await Hostel.findByIdAndUpdate(data.hostelId, { $inc: { occupancy: 1 } }, { session });
+      const currentStudentFilter: Record<string, unknown> = { _id: student._id, applicationStatus: { $in: ['approved', 'allocated'] } };
+      currentStudentFilter.roomId = previousRoomId || { $exists: false };
+      const updatedStudent = await Student.findOneAndUpdate(currentStudentFilter, {
+        $set: { hostelId: data.hostelId, roomId: data.roomId, applicationStatus: 'allocated', allocationStatus: 'active', allocatedAt: now, allocatedBy: actorId },
+      }, { new: true, runValidators: true, session });
+      if (!updatedStudent) throw AppError.conflict('The student allocation changed. Refresh and try again');
 
-      // Record history
+      if (application) {
+        const applicationResult = await StudentApplication.updateOne(
+          { _id: application._id, status: { $in: ['approved', 'allocated'] } },
+          { $set: { hostelId: data.hostelId, roomId: data.roomId, status: 'allocated', allocatedAt: now, allocatedBy: actorId } },
+          { session },
+        );
+        if (application.status === 'approved' && applicationResult.matchedCount === 0) throw AppError.conflict('The application allocation changed. Refresh and try again');
+      }
+      await AllocationHistory.updateMany({ studentId: student._id, status: 'active' }, { $set: { status: 'transferred' } }, { session });
+      await AllocationHistory.create([{ studentId: student._id, studentNumber: student.rollNumber, studentName: student.name, action: previousRoomId ? 'transfer' : 'allocate', previousHostelId, previousRoomId, hostelId: data.hostelId, roomId: data.roomId, reason: data.reason, allocatedBy: actorId, allocatedAt: now, status: 'active' }], { session });
+      await session.commitTransaction();
+    } catch (error) {
+      try { await session.abortTransaction(); } catch { /* standalone MongoDB deployments may not support transactions */ }
+      if (isTransactionUnsupported(error)) return this.allocateWithoutTransaction(student, application, data, actorId);
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+    return Student.findById(student._id).populate('hostelId', 'name type').populate('roomId', 'roomNumber floor type capacity').lean();
+  }
+
+  private async allocateStudent(
+    student: IStudentDocument,
+    application: IStudentApplicationDocument | null,
+    data: { hostelId: string; roomId: string; reason: string },
+    actorId: string,
+    actorRole: UserRole,
+  ) {
+    if (!['approved', 'allocated'].includes(student.applicationStatus) && !student.roomId) throw AppError.badRequest('Only approved students can be allocated');
+    await this.assertAllocationTarget(data, actorId, actorRole, student.gender);
+    if (student.roomId && String(student.roomId) === data.roomId) throw AppError.badRequest('Student is already allocated to this room');
+    await this.reconcileOccupancy(student.roomId, student.hostelId);
+    await this.reconcileOccupancy(new mongoose.Types.ObjectId(data.roomId), new mongoose.Types.ObjectId(data.hostelId));
+    return this.allocateWithTransaction(student, application, data, actorId);
+  }
+
+  async allocateRoom(studentId: string, data: { hostelId: string; roomId: string; reason: string }, actorId: string, actorRole: UserRole) {
+    const student = await Student.findById(studentId);
+    if (!student) throw AppError.notFound('Student not found');
+    const application = await StudentApplication.findOne({ studentId: student._id, status: { $in: ['approved', 'allocated'] } });
+    return this.allocateStudent(student, application, data, actorId, actorRole);
+  }
+
+  async allocateApplication(applicationId: string, data: { hostelId: string; roomId: string; reason: string }, actorId: string, actorRole: UserRole) {
+    const application = await StudentApplication.findById(applicationId);
+    if (!application) throw AppError.notFound('Application not found');
+    if (application.status !== 'approved') throw AppError.badRequest('Only approved applications can be allocated');
+    const student = await this.ensureStudentProfile(application);
+    if (!student) throw AppError.badRequest('Student profile could not be created');
+    return this.allocateStudent(student, application, data, actorId, actorRole);
+  }
+
+  async getStudentAllocation(studentId: string) {
+    const student = await Student.findById(studentId)
+      .populate('hostelId', 'name type')
+      .populate('roomId', 'roomNumber floor type capacity')
+      .populate('allocatedBy', 'name email role')
+      .lean();
+    if (!student) throw AppError.notFound('Student not found');
+    const history = await AllocationHistory.find({ studentId }).sort({ allocatedAt: -1 }).populate('allocatedBy', 'name email role').lean();
+    return { student, history };
+  }
+
+  async removeStudentFromRoom(studentId: string, actorId: string) {
+    const student = await Student.findById(studentId);
+    if (!student) throw AppError.notFound('Student not found');
+    if (!student.roomId) throw AppError.badRequest('Student is not assigned to a room');
+
+    const roomId = student.roomId;
+    const hostelId = student.hostelId;
+    const application = await StudentApplication.findOne({ studentId: student._id, status: 'allocated' });
+    const previousRoomId = roomId;
+    const previousHostelId = hostelId;
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+      const currentStudent = await Student.findOneAndUpdate(
+        { _id: student._id, roomId },
+        { $unset: { hostelId: 1, roomId: 1, allocatedAt: 1, allocatedBy: 1 }, $set: { applicationStatus: 'approved', allocationStatus: 'none' } },
+        { new: true, session },
+      );
+      if (!currentStudent) throw AppError.conflict('Student allocation changed. Refresh and try again');
+      await Room.updateOne({ _id: roomId, occupied: { $gt: 0 } }, { $inc: { occupied: -1 } }, { session });
+      if (hostelId) await Hostel.updateOne({ _id: hostelId, occupancy: { $gt: 0 } }, { $inc: { occupancy: -1 } }, { session });
+      if (application) {
+        await StudentApplication.updateOne(
+          { _id: application._id, status: 'allocated' },
+          { $unset: { hostelId: 1, roomId: 1, allocatedAt: 1, allocatedBy: 1 }, $set: { status: 'approved' } },
+          { session },
+        );
+      }
+      await AllocationHistory.updateMany({ studentId: student._id, status: 'active' }, { $set: { status: 'ended' } }, { session });
       await AllocationHistory.create([{
         studentId: student._id,
         studentNumber: student.rollNumber,
         studentName: student.name,
-        action: previousHostelId ? 'transfer' : 'allocate',
+        action: 'deallocate',
         previousHostelId,
         previousRoomId,
-        hostelId: data.hostelId,
-        roomId: data.roomId,
-        reason: data.reason,
+        hostelId: previousHostelId || new mongoose.Types.ObjectId(),
+        roomId: previousRoomId,
+        reason: 'Student removed from room',
         allocatedBy: actorId,
         allocatedAt: new Date(),
+        status: 'ended',
       }], { session });
-
-      // Update related application if exists
-      await StudentApplication.updateOne(
-        { studentId: student._id, status: 'approved' },
-        { hostelId: data.hostelId, roomId: data.roomId, status: 'allocated', allocatedAt: new Date(), allocatedBy: actorId }
-      );
-
       await session.commitTransaction();
     } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
-    }
+      try { await session.abortTransaction(); } catch { /* standalone MongoDB deployments may not support transactions */ }
+      if (!isTransactionUnsupported(error)) throw error;
 
-    return student;
+      const cleared = await Student.findOneAndUpdate(
+        { _id: student._id, roomId },
+        { $unset: { hostelId: 1, roomId: 1, allocatedAt: 1, allocatedBy: 1 }, $set: { applicationStatus: 'approved', allocationStatus: 'none' } },
+        { new: true },
+      );
+      if (!cleared) throw AppError.conflict('Student allocation changed. Refresh and try again');
+      try {
+        await Room.updateOne({ _id: roomId, occupied: { $gt: 0 } }, { $inc: { occupied: -1 } });
+        if (hostelId) await Hostel.updateOne({ _id: hostelId, occupancy: { $gt: 0 } }, { $inc: { occupancy: -1 } });
+        if (application) await StudentApplication.updateOne({ _id: application._id, status: 'allocated' }, { $unset: { hostelId: 1, roomId: 1, allocatedAt: 1, allocatedBy: 1 }, $set: { status: 'approved' } });
+        await AllocationHistory.updateMany({ studentId: student._id, status: 'active' }, { $set: { status: 'ended' } });
+        await AllocationHistory.create({ studentId: student._id, studentNumber: student.rollNumber, studentName: student.name, action: 'deallocate', previousHostelId, previousRoomId, hostelId: previousHostelId || new mongoose.Types.ObjectId(), roomId: previousRoomId, reason: 'Student removed from room', allocatedBy: actorId, allocatedAt: new Date(), status: 'ended' });
+      } catch (fallbackError) {
+        await Student.updateOne({ _id: student._id }, { $set: { hostelId: previousHostelId, roomId: previousRoomId, allocationStatus: 'active', applicationStatus: 'allocated' } });
+        throw fallbackError;
+      }
+    } finally {
+      await session.endSession();
+    }
+    await createAuditLog({ userId: actorId, action: 'update', entity: 'Student', entityId: studentId, description: `Student ${student.name} removed from room` });
+    return Student.findById(studentId).populate('hostelId', 'name type').populate('roomId', 'roomNumber floor type capacity').lean();
   }
 
   // ─── Registration Form Management ───────────────────────────────────────

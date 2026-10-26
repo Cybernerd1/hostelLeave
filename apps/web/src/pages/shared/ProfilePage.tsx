@@ -51,6 +51,13 @@ export function ProfilePage() {
     .join('')
     .toUpperCase() ?? '?';
 
+  const studentProfile = user?.role === 'student' ? user.profile as {
+    hostelId?: { name?: string };
+    roomId?: { roomNumber?: string; capacity?: number };
+    allocatedAt?: string;
+    allocationStatus?: string;
+  } | undefined : undefined;
+
   return (
     <div className="profile-page animate-fade-in-up">
       <div className="profile-page__header">
@@ -85,6 +92,19 @@ export function ProfilePage() {
             </div>
           </div>
         </Card>
+
+        {user?.role === 'student' && (
+          <Card variant="default" padding="lg">
+            <h3 className="profile-section__title">Hostel Allocation</h3>
+            <div className="profile-card__details">
+              <div className="profile-detail-row"><span className="profile-detail-label">Status</span><span className="profile-detail-value">{studentProfile?.allocationStatus === 'active' || studentProfile?.roomId ? 'Allocated' : 'Awaiting Hostel Allocation'}</span></div>
+              <div className="profile-detail-row"><span className="profile-detail-label">Hostel</span><span className="profile-detail-value">{studentProfile?.hostelId?.name || '—'}</span></div>
+              <div className="profile-detail-row"><span className="profile-detail-label">Room</span><span className="profile-detail-value">{studentProfile?.roomId?.roomNumber || '—'}</span></div>
+              <div className="profile-detail-row"><span className="profile-detail-label">Room Capacity</span><span className="profile-detail-value">{studentProfile?.roomId?.capacity ?? '—'}</span></div>
+              <div className="profile-detail-row"><span className="profile-detail-label">Allocation Date</span><span className="profile-detail-value">{studentProfile?.allocatedAt ? new Date(studentProfile.allocatedAt).toLocaleDateString() : '—'}</span></div>
+            </div>
+          </Card>
+        )}
 
         {/* Change Password */}
         <Card variant="default" padding="lg">

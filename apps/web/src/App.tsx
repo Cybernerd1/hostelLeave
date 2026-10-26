@@ -62,6 +62,7 @@ import { DepartmentsPage } from '@/pages/admin/DepartmentsPage';
 import { CoursesPage } from '@/pages/admin/CoursesPage';
 import { HostelsPage } from '@/pages/admin/HostelsPage';
 import { RoomsPage } from '@/pages/admin/RoomsPage';
+import { HostelRoomsPage } from '@/pages/admin/HostelRoomsPage';
 import { StaffPage } from '@/pages/admin/StaffPage';
 import { AuditLogsPage } from '@/pages/admin/AuditLogsPage';
 
@@ -134,16 +135,25 @@ export default function App() {
           </Route>
 
           {/* ─── Shared: Applications & Reg. Forms (Admin + Chief Warden + Warden) ── */}
-          <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.CHIEF_WARDEN, UserRole.WARDEN]} />}>
-            <Route element={<DashboardLayout />}>
+           <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.CHIEF_WARDEN, UserRole.WARDEN]} />}>
+             <Route element={<DashboardLayout />}>
               <Route path="/admin/applications" element={<ApplicationsListPage />} />
               <Route path="/admin/applications/:id" element={<ApplicationDetailPage />} />
               <Route path="/admin/registration-forms" element={<RegistrationFormsPage />} />
-              <Route path="/admin/registration-forms/new" element={<CreateRegistrationFormPage />} />
+                <Route path="/admin/registration-forms/new" element={<CreateRegistrationFormPage />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* ─── HOD Routes ──────────────────────────────────────────── */}
+            {/* ─── Hostel configuration (Admin + Chief Warden) ─────────── */}
+           <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.CHIEF_WARDEN]} />}>
+             <Route element={<DashboardLayout />}>
+               <Route path="/admin/hostels" element={<HostelsPage />} />
+               <Route path="/admin/hostels/:id/rooms" element={<HostelRoomsPage />} />
+               <Route path="/admin/rooms" element={<RoomsPage />} />
+             </Route>
+            </Route>
+
+           {/* ─── HOD Routes ──────────────────────────────────────────── */}
           <Route element={<ProtectedRoute allowedRoles={[UserRole.HOD]} />}>
             <Route element={<DashboardLayout />}>
               <Route path="/hod/dashboard" element={<WardenDashboard />} />
@@ -195,8 +205,6 @@ export default function App() {
               <Route path="/admin/parents" element={<ParentsListPage />} />
               <Route path="/admin/departments" element={<DepartmentsPage />} />
               <Route path="/admin/courses" element={<CoursesPage />} />
-              <Route path="/admin/hostels" element={<HostelsPage />} />
-              <Route path="/admin/rooms" element={<RoomsPage />} />
               <Route path="/admin/staff" element={<StaffPage />} />
               <Route path="/admin/leaves" element={<AllLeavesPage />} />
               <Route path="/admin/reports" element={<ReportsPage />} />

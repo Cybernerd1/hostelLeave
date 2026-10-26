@@ -26,6 +26,7 @@ export interface IAllocationHistoryDocument extends Document {
   reason: string;
   allocatedBy: mongoose.Types.ObjectId;
   allocatedAt: Date;
+  status: 'active' | 'transferred' | 'ended';
 
   createdAt: Date;
   updatedAt: Date;
@@ -84,6 +85,12 @@ const allocationHistorySchema = new Schema<IAllocationHistoryDocument>(
     },
     allocatedAt: {
       type: Date,
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ['active', 'transferred', 'ended'],
+      default: 'active',
       required: true,
     },
   },

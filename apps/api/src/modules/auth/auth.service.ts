@@ -249,7 +249,7 @@ export class AuthService {
           .populate('departmentId', 'name code')
           .populate('courseId', 'name code')
           .populate('hostelId', 'name type')
-          .populate('roomId', 'roomNumber floor type')
+          .populate('roomId', 'roomNumber floor type capacity')
           .lean();
         return student as Record<string, unknown> | null;
       }

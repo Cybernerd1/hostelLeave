@@ -48,6 +48,9 @@ export interface IStudentDocument extends Document {
   guardianPincode?: string;
   guardianCountry?: string;
   applicationStatus: 'pending' | 'approved' | 'rejected' | 'allocated';
+  allocationStatus: 'none' | 'active' | 'transferred' | 'ended';
+  allocatedAt?: Date;
+  allocatedBy?: mongoose.Types.ObjectId;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -164,6 +167,14 @@ const studentSchema = new Schema<IStudentDocument>(
       default: 'pending',
       index: true,
     },
+    allocationStatus: {
+      type: String,
+      enum: ['none', 'active', 'transferred', 'ended'],
+      default: 'none',
+      index: true,
+    },
+    allocatedAt: { type: Date },
+    allocatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     isActive: {
       type: Boolean,
       default: true,
