@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { leaveApi, type LeaveRequest } from '@/services/leave.service';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import { getRoleConfig } from '@/utils/roleConfig';
 import './ApprovalsPage.css';
 
@@ -27,10 +28,10 @@ export function PendingApprovalsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const basePath = user ? getRoleConfig(user.role).basePath : '';
+  const { error: showError, success } = useFeedback();
 
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Approval modal state
   const [modal, setModal] = useState<{ leaveId: string; action: 'approve' | 'reject' } | null>(null);
@@ -39,12 +40,11 @@ export function PendingApprovalsPage() {
 
   const fetchPending = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await leaveApi.getPending();
       setLeaves(data);
     } catch {
-      setError('Failed to load pending approvals.');
+      showError('Failed to load pending approvals.');
     } finally {
       setLoading(false);
     }
@@ -65,10 +65,11 @@ export function PendingApprovalsPage() {
     try {
       await leaveApi.processApproval(modal.leaveId, modal.action, remarks);
       await fetchPending();
+      success(`Leave ${modal.action === 'approve' ? 'approved' : 'rejected'} successfully.`);
       closeModal();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || 'Action failed.');
+      showError(e.response?.data?.message || 'Action failed.');
     } finally {
       setProcessing(false);
     }
@@ -89,8 +90,6 @@ export function PendingApprovalsPage() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15"/></svg>
         </button>
       </div>
-
-      {error && <div className="error-banner">{error}</div>}
 
       <Card variant="default" padding="none">
         {loading ? (

@@ -7,6 +7,7 @@
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { FeedbackProvider } from '@/components/ui/FeedbackProvider';
 
 // Route guards
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -69,8 +70,9 @@ import { AuditLogsPage } from '@/pages/admin/AuditLogsPage';
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
+      <FeedbackProvider>
+        <AuthProvider>
+          <Routes>
           {/* ─── Public Routes ───────────────────────────────────────── */}
           <Route element={<PublicRoute />}>
             <Route path="/" element={<HomePage />} />
@@ -219,8 +221,9 @@ export default function App() {
 
           {/* ─── Catch-all: redirect to home ──────────────────────── */}
           <Route path="*" element={<HomePage />} />
-        </Routes>
-      </AuthProvider>
+          </Routes>
+        </AuthProvider>
+      </FeedbackProvider>
     </BrowserRouter>
   );
 }

@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { adminApi } from '@/services/admin.service';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import './AdminPages.css';
 
 const GENDERS = [
@@ -20,6 +21,7 @@ export function RegisterStudentPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isAdminOrChief = user?.role === 'admin' || user?.role === 'chief_warden';
+  const { error: showError, success } = useFeedback();
 
   const [form, setForm] = useState({
     email: '', password: '', rollNumber: '', studentNumber: '', name: '', phone: '',
@@ -33,7 +35,6 @@ export function RegisterStudentPage() {
   });
   const [departments, setDepartments] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
-  const [msg, setMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const fetchDepartments = useCallback(async () => {
@@ -54,20 +55,18 @@ export function RegisterStudentPage() {
 
   const handleChange = (key: string, value: string | number) => {
     setForm({ ...form, [key]: value });
-    setMsg(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setMsg(null);
     try {
       await adminApi.registerStudent(form);
-      setMsg('✅ Student application created successfully!');
+      success('Student application created successfully.');
       setTimeout(() => navigate('/admin/applications'), 1500);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setMsg('❌ ' + (e.response?.data?.message || 'Failed to register student.'));
+      showError(e.response?.data?.message || 'Failed to register student.');
     } finally {
       setSubmitting(false);
     }
@@ -93,7 +92,6 @@ export function RegisterStudentPage() {
         </div>
       </div>
 
-      {msg && <div style={{ marginBottom: '1rem', padding: '0.75rem', borderRadius: 6, background: msg.startsWith('✅') ? '#d1fae5' : '#fee2e2', color: msg.startsWith('✅') ? '#15803d' : '#dc2626', fontSize: '0.875rem' }}>{msg}</div>}
 
       <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
         <Card variant="default" padding="lg" style={{ gridColumn: 'span 2' }}>

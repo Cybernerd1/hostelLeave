@@ -9,6 +9,7 @@ import { adminApi, type ApplicationRecord } from '@/services/admin.service';
 import type { RoomRecord } from '@/services/admin.service';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import '../shared/ApprovalsPage.css';
 import './AdminPages.css';
 
@@ -24,9 +25,9 @@ export function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { error: showError, success } = useFeedback();
   const [application, setApplication] = useState<ApplicationRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [msg, setMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [availableHostels, setAvailableHostels] = useState<Array<{ _id: string; name: string; type: string; roomsAvailable: number; seatsRemaining: number }>>([]);
   const [availableRooms, setAvailableRooms] = useState<RoomRecord[]>([]);
@@ -34,13 +35,12 @@ export function ApplicationDetailPage() {
   const [selectedRoomId, setSelectedRoomId] = useState('');
   const [allocationReason, setAllocationReason] = useState('Approved student hostel allocation');
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
-  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
     adminApi.getApplicationById(id)
       .then(setApplication)
-      .catch(() => setApplication(null))
+      .catch(() => { setApplication(null); showError('Unable to load application details.'); })
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -49,10 +49,10 @@ export function ApplicationDetailPage() {
   useEffect(() => {
     if (!canAllocate) return;
     setAvailabilityLoading(true);
-    setAvailabilityError(null);
+
     adminApi.getAvailableHostels()
       .then(setAvailableHostels)
-      .catch(() => setAvailabilityError('Unable to load hostel availability.'))
+      .catch(() => { showError('Unable to load hostel availability.'); })
       .finally(() => setAvailabilityLoading(false));
   }, [canAllocate]);
 
@@ -62,24 +62,22 @@ export function ApplicationDetailPage() {
     setAvailableRooms([]);
     if (!hostelId) return;
     setAvailabilityLoading(true);
-    setAvailabilityError(null);
-    try { setAvailableRooms(await adminApi.getAvailableRooms(hostelId)); } catch { setAvailabilityError('Unable to load rooms for the selected hostel.'); } finally { setAvailabilityLoading(false); }
+    try { setAvailableRooms(await adminApi.getAvailableRooms(hostelId)); } catch { showError('Unable to load rooms for the selected hostel.'); } finally { setAvailabilityLoading(false); }
   };
 
   const handleAllocation = async () => {
     if (!id || !selectedHostelId || !selectedRoomId) return;
     setSubmitting(true);
-    setMsg(null);
     try {
       await adminApi.allocateApplication(id, { hostelId: selectedHostelId, roomId: selectedRoomId, reason: allocationReason.trim() || 'Hostel allocation' });
-      setMsg('✅ Hostel and room allocated successfully.');
+      success('Hostel and room allocated successfully.');
       setApplication(await adminApi.getApplicationById(id));
       setSelectedHostelId('');
       setSelectedRoomId('');
       setAvailableRooms([]);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setMsg('❌ ' + (e.response?.data?.message || 'Room is no longer available. Refresh and try again.'));
+      showError(e.response?.data?.message || 'Room is no longer available. Refresh and try again.');
       if (selectedHostelId) handleHostelChange(selectedHostelId);
     } finally { setSubmitting(false); }
   };
@@ -89,7 +87,6 @@ export function ApplicationDetailPage() {
   const handleAction = async (action: 'approve' | 'reject') => {
     if (!id) return;
     setSubmitting(true);
-    setMsg(null);
 
     let rejectionReason = '';
     let reviewNotes = '';
@@ -98,7 +95,7 @@ export function ApplicationDetailPage() {
       rejectionReason = window.prompt('Please enter a reason for rejection:');
       if (rejectionReason === null || rejectionReason.trim() === '') {
         setSubmitting(false);
-        setMsg('Rejection reason is required.');
+        showError('Rejection reason is required.');
         return;
       }
       rejectionReason = rejectionReason.trim();
@@ -112,11 +109,11 @@ export function ApplicationDetailPage() {
         reviewNotes,
         rejectionReason: action === 'reject' ? rejectionReason : undefined,
       });
-      setMsg(`✅ Application ${action}d successfully!`);
+      success(`Application ${action}d successfully.`);
       setTimeout(() => navigate('/admin/applications'), 1500);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setMsg('❌ ' + (e.response?.data?.message || 'Failed.'));
+      showError(e.response?.data?.message || 'Failed to update application.');
     } finally {
       setSubmitting(false);
     }
@@ -139,7 +136,6 @@ export function ApplicationDetailPage() {
         </div>
       </div>
 
-      {msg && <div style={{ marginBottom: '1rem', padding: '0.75rem', borderRadius: 6, background: msg.startsWith('✅') ? '#d1fae5' : '#fee2e2', color: msg.startsWith('✅') ? '#15803d' : '#dc2626', fontSize: '0.875rem' }}>{msg}</div>}
 
       <div className="detail-grid">
         {/* Application Info */}
@@ -238,7 +234,6 @@ export function ApplicationDetailPage() {
             <div className="detail-section">
               <p className="detail-section__title">Allocate Hostel & Room</p>
               <p style={{ color: 'var(--color-neutral-500)', fontSize: '0.875rem' }}>Availability is rechecked by the server when you confirm.</p>
-              {availabilityError && <div className="error-banner">{availabilityError}</div>}
               <div className="filters-row">
                 <select className="filter-select" value={selectedHostelId} onChange={(e) => handleHostelChange(e.target.value)} disabled={availabilityLoading}>
                   <option value="">{availabilityLoading ? 'Loading hostels…' : availableHostels.length ? 'Select hostel' : 'No hostels with seats'}</option>

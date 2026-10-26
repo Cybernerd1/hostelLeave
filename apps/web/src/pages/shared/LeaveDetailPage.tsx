@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import { leaveApi, type LeaveRequest } from '@/services/leave.service';
 import './LeaveDetailPage.css';
 
@@ -92,29 +93,25 @@ export function LeaveDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { error: showError, success } = useFeedback();
 
   const [leave, setLeave] = useState<LeaveRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
   const [isPdfLoading, setIsPdfLoading] = useState(false);
-  const [pdfError, setPdfError] = useState('');
 
   // Approval action state
   const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError] = useState('');
-  const [actionSuccess, setActionSuccess] = useState('');
   const [remarks, setRemarks] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
 
   const fetchLeave = useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
-    setError('');
     try {
       const data = await leaveApi.getById(id);
       setLeave(data);
     } catch {
-      setError('Failed to load leave details. Please try again.');
+      showError('Failed to load leave details. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -125,7 +122,6 @@ export function LeaveDetailPage() {
   const handleDownloadPDF = async () => {
     if (!id || !leave) return;
     setIsPdfLoading(true);
-    setPdfError('');
     try {
       const blob = await leaveApi.downloadPDF(id);
       // Check if the response is actually JSON (error) instead of PDF
@@ -146,7 +142,7 @@ export function LeaveDetailPage() {
       const msg = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
         || (err as { message?: string })?.message
         || 'Could not generate PDF. Please try again.';
-      setPdfError(msg);
+      showError(msg);
     } finally {
       setIsPdfLoading(false);
     }
@@ -155,22 +151,20 @@ export function LeaveDetailPage() {
   const handleApprovalAction = async (action: 'approved' | 'rejected') => {
     if (!id) return;
     if (action === 'rejected' && !remarks.trim()) {
-      setActionError('Please provide a reason for rejection.');
+      showError('Please provide a reason for rejection.');
       return;
     }
     setActionLoading(true);
-    setActionError('');
-    setActionSuccess('');
     try {
       await leaveApi.processApproval(id, action, remarks.trim() || undefined);
-      setActionSuccess(`Leave ${action} successfully.`);
+      success(`Leave ${action} successfully.`);
       setRemarks('');
       setShowRejectForm(false);
       // Reload the leave to show updated status
       await fetchLeave();
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setActionError(msg || `Failed to ${action === 'approved' ? 'approve' : 'reject'} leave.`);
+      showError(msg || `Failed to ${action === 'approved' ? 'approve' : 'reject'} leave.`);
     } finally {
       setActionLoading(false);
     }
@@ -224,7 +218,7 @@ export function LeaveDetailPage() {
     );
   }
 
-  if (error || !leave) {
+  if (!leave) {
     return (
       <div className="leave-detail__error-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -232,7 +226,7 @@ export function LeaveDetailPage() {
           <line x1="12" y1="8" x2="12" y2="12" />
           <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
-        <h3>{error || 'Leave request not found'}</h3>
+        <h3>Leave request not found</h3>
         <button className="leave-detail__btn-secondary" onClick={() => navigate(-1)}>Go Back</button>
       </div>
     );
@@ -287,10 +281,6 @@ export function LeaveDetailPage() {
           )}
         </div>
       </div>
-
-      {pdfError && (
-        <div className="leave-detail__pdf-error" role="alert">{pdfError}</div>
-      )}
 
       <div className="leave-detail__body">
 
@@ -372,13 +362,6 @@ export function LeaveDetailPage() {
               </div>
             </div>
 
-            {actionSuccess && (
-              <div className="leave-detail__action-success" role="status">{actionSuccess}</div>
-            )}
-            {actionError && (
-              <div className="leave-detail__action-error" role="alert">{actionError}</div>
-            )}
-
             {/* Remarks textarea (always visible, required for rejection) */}
             <div className="leave-detail__action-remarks">
               <label htmlFor="approval-remarks" className="leave-detail__field-label">
@@ -388,7 +371,7 @@ export function LeaveDetailPage() {
                 id="approval-remarks"
                 className="leave-detail__remarks-input"
                 value={remarks}
-                onChange={e => { setRemarks(e.target.value); setActionError(''); }}
+                onChange={e => setRemarks(e.target.value)}
                 placeholder="Add remarks or reason (e.g. approved for family emergency)…"
                 rows={3}
                 disabled={actionLoading}
@@ -421,7 +404,6 @@ export function LeaveDetailPage() {
                 onClick={() => {
                   if (!showRejectForm) {
                     setShowRejectForm(true);
-                    setActionError('');
                   } else {
                     handleApprovalAction('rejected');
                   }
@@ -496,6 +478,10 @@ export function LeaveDetailPage() {
             <div className="leave-detail__field">
               <span className="leave-detail__field-label">Duration</span>
               <span className="leave-detail__field-value">{calcDays(leave.fromDate, leave.toDate)} day(s)</span>
+            </div>
+            <div className="leave-detail__field">
+              <span className="leave-detail__field-label">Attendance</span>
+              <span className="leave-detail__field-value">{leave.attendance !== undefined ? `${leave.attendance}%` : '—'}</span>
             </div>
             <div className="leave-detail__field">
               <span className="leave-detail__field-label">From Date</span>

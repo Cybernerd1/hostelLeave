@@ -7,12 +7,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import { leaveApi, type LeaveRequest } from '@/services/leave.service';
 import './DashboardPage.css';
 
 export function StudentDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { error: showError } = useFeedback();
 
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +57,7 @@ export function StudentDashboard() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {
-      alert('Could not download PDF pass.');
+      showError('Could not download PDF pass.');
     } finally {
       setPdfLoadingId(null);
     }

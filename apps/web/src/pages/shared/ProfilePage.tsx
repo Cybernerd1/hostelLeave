@@ -8,37 +8,37 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
 import api from '@/services/api';
 import { getRoleLabel } from '@/utils/roleConfig';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import './ProfilePage.css';
 
 export function ProfilePage() {
   const { user } = useAuth();
+  const { error: showError, success } = useFeedback();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMsg(null);
     if (newPassword !== confirmPassword) {
-      setMsg({ type: 'error', text: 'New passwords do not match.' });
+      showError('New passwords do not match.');
       return;
     }
     if (newPassword.length < 6) {
-      setMsg({ type: 'error', text: 'Password must be at least 6 characters.' });
+      showError('Password must be at least 6 characters.');
       return;
     }
     setSaving(true);
     try {
       await api.put('/auth/change-password', { currentPassword, newPassword });
-      setMsg({ type: 'success', text: 'Password changed successfully.' });
+      success('Password changed successfully.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
-      setMsg({ type: 'error', text: axiosErr.response?.data?.message || 'Failed to change password.' });
+      showError(axiosErr.response?.data?.message || 'Failed to change password.');
     } finally {
       setSaving(false);
     }
@@ -147,9 +147,6 @@ export function ProfilePage() {
                 autoComplete="new-password"
               />
             </div>
-            {msg && (
-              <div className={`form-message form-message--${msg.type}`}>{msg.text}</div>
-            )}
             <button type="submit" className="btn btn--primary" disabled={saving}>
               {saving ? 'Saving…' : 'Update Password'}
             </button>

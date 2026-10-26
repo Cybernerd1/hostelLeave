@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { adminApi, type HostelRecord } from '@/services/admin.service';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import '../shared/ApprovalsPage.css';
-
 const emptyForm = { name: '', type: 'co_ed', totalRooms: 1, studentsPerRoom: 1 as 1 | 2 | 3 };
 
 export function HostelsPage() {
+  const { confirm, success, error: showError } = useFeedback();
   const { user } = useAuth();
   const navigate = useNavigate();
   const canManage = user?.role === 'admin' || user?.role === 'chief_warden';
@@ -21,7 +22,6 @@ export function HostelsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -29,7 +29,7 @@ export function HostelsPage() {
       const res = await adminApi.getHostels({ page, limit: 15, search: search || undefined });
       setHostels(res.data);
       setPagination({ page: res.pagination.page, totalPages: res.pagination.totalPages, total: res.pagination.total });
-    } catch { setHostels([]); } finally { setLoading(false); }
+    } catch { setHostels([]); showError('Unable to load hostels.'); } finally { setLoading(false); }
   }, [page, search]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -37,20 +37,26 @@ export function HostelsPage() {
   const saveHostel = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
-    setMessage(null);
+
     try {
       const saved = editingId
         ? await adminApi.updateHostel(editingId, form)
         : await adminApi.createHostel(form);
-      setMessage(`${saved.name} ${editingId ? 'updated' : 'created'} successfully.`);
+      success(`${saved.name} ${editingId ? 'updated' : 'created'} successfully.`);
       setForm(emptyForm);
       setEditingId(null);
       setFormOpen(false);
       await fetchData();
     } catch (err: unknown) {
       const apiError = err as { response?: { data?: { message?: string } } };
-      setMessage(apiError.response?.data?.message || 'Unable to save hostel.');
+      showError(apiError.response?.data?.message || 'Unable to save hostel.');
     } finally { setSaving(false); }
+  };
+
+  const deleteHostel = async (hostel: HostelRecord) => {
+    if (!await confirm({ title: 'Delete hostel?', message: `Delete ${hostel.name}?`, confirmLabel: 'Delete', destructive: true })) return;
+    try { await adminApi.deleteHostel(hostel._id); success(`${hostel.name} deleted.`); await fetchData(); }
+    catch (err: unknown) { const apiError = err as { response?: { data?: { message?: string } } }; showError(apiError.response?.data?.message || 'Unable to delete hostel.'); }
   };
 
   return (
@@ -59,7 +65,6 @@ export function HostelsPage() {
         <div><h1 className="approvals-page__title">Hostels</h1><p className="approvals-page__subtitle">{pagination.total} hostels with live capacity</p></div>
         {canManage && <button className="btn btn--primary" onClick={() => { setForm(emptyForm); setEditingId(null); setFormOpen(true); }}>+ Create Hostel</button>}
       </div>
-      {message && <div className="form-message form-message--success" style={{ marginBottom: '1rem' }}>{message}</div>}
 
       {formOpen && canManage && (
         <Card variant="default" padding="lg">
@@ -93,7 +98,7 @@ export function HostelsPage() {
               <td><div className="cell-primary">{hostel.name}</div><div className="cell-secondary">{hostel.type} · {hostel.studentsPerRoom} per room</div></td>
               <td>{hostel.totalRooms}</td><td>{hostel.capacity}</td><td>{hostel.occupiedSeats}</td><td>{hostel.availableSeats}</td><td>{hostel.occupancyPercentage}%</td>
               <td><span className={`status-badge status-badge--${hostel.isActive ? 'approved' : 'rejected'}`}>{hostel.isActive ? 'Active' : 'Inactive'}</span></td>
-              <td><button className="btn-action btn-action--view" onClick={() => navigate(`/admin/hostels/${hostel._id}/rooms`)}>View rooms</button>{canManage && <><button className="btn-action btn-action--view" style={{ marginLeft: 6 }} onClick={() => { setEditingId(hostel._id); setForm({ name: hostel.name, type: hostel.type, totalRooms: hostel.totalRooms, studentsPerRoom: hostel.studentsPerRoom || 1 }); setFormOpen(true); }}>Edit</button><button className="btn-action btn-action--view" style={{ marginLeft: 6 }} onClick={async () => { try { const updated = await adminApi.updateHostel(hostel._id, { isActive: !hostel.isActive }); setHostels((current) => current.map((item) => item._id === hostel._id ? updated : item)); } catch { setMessage('Unable to change hostel status.'); } }}>{hostel.isActive ? 'Mark unavailable' : 'Mark available'}</button><button className="btn-action btn-action--view" style={{ marginLeft: 6 }} onClick={async () => { if (!window.confirm(`Delete ${hostel.name}?`)) return; try { await adminApi.deleteHostel(hostel._id); setMessage(`${hostel.name} deleted.`); await fetchData(); } catch (err: unknown) { const apiError = err as { response?: { data?: { message?: string } } }; setMessage(apiError.response?.data?.message || 'Unable to delete hostel.'); } }}>Delete</button></>}</td>
+              <td><button className="btn-action btn-action--view" onClick={() => navigate(`/admin/hostels/${hostel._id}/rooms`)}>View rooms</button>{canManage && <><button className="btn-action btn-action--view" style={{ marginLeft: 6 }} onClick={() => { setEditingId(hostel._id); setForm({ name: hostel.name, type: hostel.type, totalRooms: hostel.totalRooms, studentsPerRoom: hostel.studentsPerRoom || 1 }); setFormOpen(true); }}>Edit</button><button className="btn-action btn-action--view" style={{ marginLeft: 6 }} onClick={async () => { try { const updated = await adminApi.updateHostel(hostel._id, { isActive: !hostel.isActive }); setHostels((current) => current.map((item) => item._id === hostel._id ? updated : item)); success(`Hostel marked ${updated.isActive ? 'available' : 'unavailable'}.`); } catch { showError('Unable to change hostel status.'); } }}>{hostel.isActive ? 'Mark unavailable' : 'Mark available'}</button><button className="btn-action btn-action--view" style={{ marginLeft: 6 }} onClick={() => deleteHostel(hostel)}>Delete</button></>}</td>
             </tr>)}</tbody>
           </table></div>
         )}

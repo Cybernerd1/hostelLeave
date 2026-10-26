@@ -6,9 +6,9 @@
  *
  * Route: /verify/:leaveId
  */
-
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import './GuardVerifyPage.css';
 
 const API_BASE = import.meta.env.API_URL
@@ -77,35 +77,31 @@ function formatDateTime(d: string | Date) {
 
 export function GuardVerifyPage() {
   const { leaveId } = useParams<{ leaveId: string }>();
+  const { error: showError, success } = useFeedback();
 
   const [leave, setLeave]           = useState<PublicLeaveData | null>(null);
   const [isLoading, setIsLoading]   = useState(true);
-  const [error, setError]           = useState('');
 
   // Guard auth state
   const [guardToken, setGuardToken]     = useState('');
   const [guardEmail, setGuardEmail]     = useState('');
   const [guardPass, setGuardPass]       = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
-  const [loginError, setLoginError]     = useState('');
   const [isLoggedIn, setIsLoggedIn]     = useState(false);
 
   // Action state
   const [actionLoading, setActionLoading] = useState(false);
-  const [actionMsg, setActionMsg]         = useState('');
-  const [actionError, setActionError]     = useState('');
 
   const fetchLeave = useCallback(async () => {
     if (!leaveId) return;
     setIsLoading(true);
-    setError('');
     try {
       const res = await fetch(`${API_BASE}/leaves/public/${leaveId}`);
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || 'Not found');
       setLeave(json.data);
     } catch (e: unknown) {
-      setError((e as Error).message || 'Failed to load leave details');
+      showError((e as Error).message || 'Failed to load leave details');
     } finally {
       setIsLoading(false);
     }
@@ -121,11 +117,11 @@ export function GuardVerifyPage() {
 
   const handleGuardLogin = async () => {
     if (!guardEmail.trim() || !guardPass.trim()) {
-      setLoginError('Please enter your guard email and password.');
+      showError('Please enter your guard email and password.');
       return;
     }
     setLoginLoading(true);
-    setLoginError('');
+    showError('');
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
@@ -140,7 +136,7 @@ export function GuardVerifyPage() {
       sessionStorage.setItem('guardVerifyToken', token);
       setIsLoggedIn(true);
     } catch (e: unknown) {
-      setLoginError((e as Error).message || 'Login failed');
+      showError((e as Error).message || 'Login failed');
     } finally {
       setLoginLoading(false);
     }
@@ -149,8 +145,8 @@ export function GuardVerifyPage() {
   const handleAction = async (action: 'exit' | 'entry') => {
     if (!leave || !guardToken) return;
     setActionLoading(true);
-    setActionMsg('');
-    setActionError('');
+
+    showError('');
     try {
       const res = await fetch(`${API_BASE}/guard/scan`, {
         method: 'POST',
@@ -162,12 +158,12 @@ export function GuardVerifyPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || 'Action failed');
-      setActionMsg(action === 'exit'
+      success(action === 'exit'
         ? '✅ Exit recorded successfully! Student has left the hostel.'
         : '✅ Entry recorded! Student has returned. Leave is now completed.');
       await fetchLeave();
     } catch (e: unknown) {
-      setActionError((e as Error).message || 'Failed to record action.');
+      showError((e as Error).message || 'Failed to record action.');
     } finally {
       setActionLoading(false);
     }
@@ -212,16 +208,6 @@ export function GuardVerifyPage() {
           <div className="gvp__loading">
             <div className="gvp__spinner" />
             <p>Loading leave details…</p>
-          </div>
-        )}
-
-        {/* ── Error ───────────────────────────────────────────── */}
-        {!isLoading && error && (
-          <div className="gvp__error-card">
-            <div className="gvp__error-icon">⛔</div>
-            <h2>Leave Not Found</h2>
-            <p>{error}</p>
-            <p className="gvp__error-hint">The QR code may be invalid or the leave may have been cancelled.</p>
           </div>
         )}
 
@@ -339,7 +325,6 @@ export function GuardVerifyPage() {
                       onKeyDown={e => e.key === 'Enter' && handleGuardLogin()}
                     />
                   </div>
-                  {loginError && <div className="gvp__login-error">{loginError}</div>}
                   <button
                     id="guard-login-btn"
                     className="gvp__btn gvp__btn--primary"
@@ -351,8 +336,6 @@ export function GuardVerifyPage() {
                 </div>
               ) : (
                 <div className="gvp__actions">
-                  {actionMsg && <div className="gvp__action-success">{actionMsg}</div>}
-                  {actionError && <div className="gvp__action-error">{actionError}</div>}
 
                   {(isValid || isCompleted) ? (
                     <>

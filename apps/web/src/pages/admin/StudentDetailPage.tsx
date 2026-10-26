@@ -2,19 +2,20 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { adminApi, type StudentRecord, type ParentRecord } from '@/services/admin.service';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import '../shared/ApprovalsPage.css';
 import './AdminPages.css';
 
 export function StudentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { error: showError, success } = useFeedback();
   const [student, setStudent] = useState<StudentRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Assign parent
   const [selectedParentId, setSelectedParentId] = useState('');
   const [assigning, setAssigning] = useState(false);
-  const [assignMsg, setAssignMsg] = useState<string | null>(null);
   const [parents, setParents] = useState<ParentRecord[]>([]);
 
   useEffect(() => {
@@ -35,15 +36,14 @@ export function StudentDetailPage() {
   const handleAssign = async () => {
     if (!id || !selectedParentId) return;
     setAssigning(true);
-    setAssignMsg(null);
     try {
       await adminApi.assignParentToStudent(id, selectedParentId);
-      setAssignMsg('✅ Parent assigned successfully!');
+      success('Parent assigned successfully.');
       const updated = await adminApi.getStudentById(id);
       setStudent(updated);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setAssignMsg('❌ ' + (e.response?.data?.message || 'Failed.'));
+      showError(e.response?.data?.message || 'Failed to assign parent.');
     } finally {
       setAssigning(false);
     }
@@ -196,11 +196,6 @@ export function StudentDetailPage() {
               <option value="">— Select parent —</option>
               {parents.map((p) => <option key={p._id} value={p._id}>{p.name} ({p.email})</option>)}
             </select>
-            {assignMsg && (
-              <p style={{ fontSize: '0.875rem', marginBottom: '0.5rem', color: assignMsg.startsWith('✅') ? '#15803d' : '#dc2626' }}>
-                {assignMsg}
-              </p>
-            )}
             <button className="btn btn--primary" onClick={handleAssign} disabled={!selectedParentId || assigning}>
               {assigning ? 'Saving…' : 'Save Parent'}
             </button>

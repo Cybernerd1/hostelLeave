@@ -3,17 +3,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { adminApi, type AllocationCandidate, type HostelRecord, type RoomRecord } from '@/services/admin.service';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import '../shared/ApprovalsPage.css';
 
 export function HostelRoomsPage() {
+  const { confirm, success, error: showError } = useFeedback();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [hostel, setHostel] = useState<HostelRecord | null>(null);
   const [rooms, setRooms] = useState<RoomRecord[]>([]);
   const [candidates, setCandidates] = useState<AllocationCandidate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
   const [roomSearch, setRoomSearch] = useState('');
   const [availability, setAvailability] = useState('all');
   const [editing, setEditing] = useState<string | null>(null);
@@ -24,7 +24,6 @@ export function HostelRoomsPage() {
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    setError('');
     try {
       const [hostelResult, roomResult, candidateResult] = await Promise.all([
         adminApi.getHostels({ page: 1, limit: 100 }),
@@ -35,10 +34,10 @@ export function HostelRoomsPage() {
       setHostel(selected);
       setRooms(roomResult);
       setCandidates(candidateResult);
-      if (!selected) setError('Hostel not found.');
+      if (!selected) showError('Hostel not found.');
     } catch (err: unknown) {
       const apiError = err as { response?: { data?: { message?: string } } };
-      setError(apiError.response?.data?.message || 'Unable to load hostel rooms.');
+      showError(apiError.response?.data?.message || 'Unable to load hostel rooms.');
     } finally { setLoading(false); }
   }, [id]);
 
@@ -46,27 +45,26 @@ export function HostelRoomsPage() {
 
   const saveRoom = async (room: RoomRecord) => {
     setSaving(room._id);
-    setError('');
     try {
       await adminApi.updateRoom(room._id, draft);
       setEditing(null);
-      setMessage(`Room ${draft.roomNumber} updated.`);
+      success(`Room ${draft.roomNumber} updated.`);
       await load();
     } catch (err: unknown) {
       const apiError = err as { response?: { data?: { message?: string } } };
-      setError(apiError.response?.data?.message || 'Unable to update room.');
+      showError(apiError.response?.data?.message || 'Unable to update room.');
     } finally { setSaving(null); }
   };
 
   const toggleRoom = async (room: RoomRecord) => {
     try { await adminApi.updateRoom(room._id, { isActive: !room.isActive }); await load(); }
-    catch (err: unknown) { const apiError = err as { response?: { data?: { message?: string } } }; setError(apiError.response?.data?.message || 'Unable to change room status.'); }
+    catch (err: unknown) { const apiError = err as { response?: { data?: { message?: string } } }; showError(apiError.response?.data?.message || 'Unable to change room status.'); }
   };
 
   const deleteRoom = async (room: RoomRecord) => {
-    if (!window.confirm(`Delete room ${room.roomNumber}?`)) return;
-    try { await adminApi.deleteRoom(room._id); setMessage(`Room ${room.roomNumber} deleted.`); await load(); }
-    catch (err: unknown) { const apiError = err as { response?: { data?: { message?: string } } }; setError(apiError.response?.data?.message || 'Unable to delete room.'); }
+    if (!await confirm({ title: 'Delete room?', message: `Delete room ${room.roomNumber}?`, confirmLabel: 'Delete', destructive: true })) return;
+    try { await adminApi.deleteRoom(room._id); success(`Room ${room.roomNumber} deleted.`); await load(); }
+    catch (err: unknown) { const apiError = err as { response?: { data?: { message?: string } } }; showError(apiError.response?.data?.message || 'Unable to delete room.'); }
   };
 
   const addStudent = async (room: RoomRecord, studentId: string) => {
@@ -74,16 +72,16 @@ export function HostelRoomsPage() {
     setAdding(room._id);
     try {
       await adminApi.allocateRoom(studentId, { hostelId: hostel._id, roomId: room._id, reason: `Room assignment by hostel manager` });
-      setMessage('Student added to room.');
+      success('Student added to room.');
       await load();
-    } catch (err: unknown) { const apiError = err as { response?: { data?: { message?: string } } }; setError(apiError.response?.data?.message || 'Unable to add student to room.'); }
+    } catch (err: unknown) { const apiError = err as { response?: { data?: { message?: string } } }; showError(apiError.response?.data?.message || 'Unable to add student to room.'); }
     finally { setAdding(null); }
   };
 
   const removeStudent = async (studentId: string) => {
-    if (!window.confirm('Remove this student from the hostel and room?')) return;
-    try { await adminApi.removeStudentFromRoom(studentId); setMessage('Student removed from room and hostel.'); await load(); }
-    catch (err: unknown) { const apiError = err as { response?: { data?: { message?: string } } }; setError(apiError.response?.data?.message || 'Unable to remove student.'); }
+    if (!await confirm({ title: 'Remove student?', message: 'Remove this student from the hostel and room?', confirmLabel: 'Remove', destructive: true })) return;
+    try { await adminApi.removeStudentFromRoom(studentId); success('Student removed from room and hostel.'); await load(); }
+    catch (err: unknown) { const apiError = err as { response?: { data?: { message?: string } } }; showError(apiError.response?.data?.message || 'Unable to remove student.'); }
   };
 
   const filteredRooms = rooms
@@ -91,15 +89,13 @@ export function HostelRoomsPage() {
     .filter((room) => availability === 'all' || (availability === 'available' ? room.isActive && room.availableSeats > 0 : availability === 'full' ? room.isActive && room.availableSeats === 0 : !room.isActive));
 
   if (loading) return <div className="table-empty"><div className="spinner" /><p>Loading rooms…</p></div>;
-  if (!hostel) return <div className="table-empty"><p>{error || 'Hostel not found.'}</p></div>;
+  if (!hostel) return <div className="table-empty"><p>Hostel not found.</p></div>;
 
   return (
     <div className="approvals-page animate-fade-in-up">
       <div className="approvals-page__header">
         <div><button className="btn-action btn-action--view" onClick={() => navigate('/admin/hostels')}>← Hostels</button><h1 className="approvals-page__title" style={{ marginTop: '0.75rem' }}>{hostel.name} Rooms</h1><p className="approvals-page__subtitle">{rooms.length} rooms · {hostel.capacity} beds · {hostel.availableSeats} available seats</p></div>
       </div>
-      {message && <div className="form-message form-message--success" style={{ marginBottom: '1rem' }}>{message}</div>}
-      {error && <div className="error-banner" style={{ marginBottom: '1rem' }}>{error}</div>}
       <div className="filters-row"><input className="filter-input" placeholder="Search room number…" value={roomSearch} onChange={(e) => setRoomSearch(e.target.value)} /><select className="filter-select" value={availability} onChange={(e) => setAvailability(e.target.value)}><option value="all">All rooms</option><option value="available">Available</option><option value="full">Full</option><option value="inactive">Unavailable</option></select></div>
       <div style={{ display: 'grid', gap: '1rem' }}>
         {filteredRooms.length === 0 ? <Card variant="default" padding="lg"><div className="table-empty"><p>No rooms match this filter.</p></div></Card> : filteredRooms.map((room) => {

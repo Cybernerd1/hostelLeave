@@ -8,30 +8,29 @@ import { useNavigate } from 'react-router-dom';
 import { adminApi, type RegistrationFormRecord } from '@/services/admin.service';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import './AdminPages.css';
 
 export function RegistrationFormsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isAdminOrChief = user?.role === 'admin' || user?.role === 'chief_warden';
+  const { error: showError, success } = useFeedback();
 
   const [forms, setForms] = useState<RegistrationFormRecord[]>([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [error, setError] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
 
   const fetchForms = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const res = await adminApi.getRegistrationForms({ page, limit: 15, search: search || undefined });
       setForms(res.data);
       setPagination({ page: res.pagination.page, totalPages: res.pagination.totalPages, total: res.pagination.total });
     } catch {
-      setError('Failed to load registration forms.');
+      showError('Failed to load registration forms.');
     } finally {
       setLoading(false);
     }
@@ -44,11 +43,11 @@ export function RegistrationFormsPage() {
   const toggleForm = async (id: string, isActive: boolean) => {
     try {
       await adminApi.updateRegistrationForm(id, { isActive: !isActive });
-      setMsg(`✅ Form ${!isActive ? 'activated' : 'deactivated'} successfully!`);
+      success(`Form ${!isActive ? 'activated' : 'deactivated'} successfully.`);
       fetchForms();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setMsg('❌ ' + (e.response?.data?.message || 'Failed to update form.'));
+      showError(e.response?.data?.message || 'Failed to update form.');
     }
   };
 
@@ -86,8 +85,6 @@ export function RegistrationFormsPage() {
         <button className="btn btn--primary btn--sm" onClick={() => { setPage(1); fetchForms(); }}>Search</button>
       </div>
 
-      {error && <div className="error-banner">{error}</div>}
-      {msg && <div style={{ marginBottom: '1rem', padding: '0.75rem', borderRadius: 6, background: msg.startsWith('✅') ? '#d1fae5' : '#fee2e2', color: msg.startsWith('✅') ? '#15803d' : '#dc2626', fontSize: '0.875rem' }}>{msg}</div>}
 
       <Card variant="default" padding="none">
         {loading ? (
@@ -118,7 +115,7 @@ export function RegistrationFormsPage() {
                       <div className="cell-primary" style={{ fontSize: '0.8rem', wordBreak: 'break-all' }}>{f.token}</div>
                       <button className="btn-action btn-action--view" style={{ fontSize: '0.75rem', marginTop: '0.25rem' }} onClick={() => {
                         navigator.clipboard.writeText(`${baseUrl}/register/${f.token}`);
-                        setMsg('✅ Link copied to clipboard!');
+                        success('Registration link copied to clipboard.');
                       }}>Copy Link</button>
                     </td>
                     <td>{f.academicSession || '—'}</td>

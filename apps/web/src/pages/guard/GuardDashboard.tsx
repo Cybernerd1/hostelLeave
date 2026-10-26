@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import api from '@/services/api';
 import '../student/DashboardPage.css';
 
@@ -18,6 +19,7 @@ interface GateLogEntry {
 }
 
 export function GuardDashboard() {
+  const { error: showError } = useFeedback();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -148,7 +150,7 @@ export function GuardDashboard() {
                               document.body.removeChild(a);
                               URL.revokeObjectURL(url);
                             } catch {
-                              alert('Could not download PDF pass.');
+                              showError('Could not download PDF pass.');
                             }
                           }}
                         >

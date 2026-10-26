@@ -46,6 +46,7 @@ export interface LeaveRequest {
   toDate: string;
   reason: string;
   destination: string;
+  attendance?: number;
   status: string;
   documents?: string[];
   approvals?: LeaveApprovalEntry[];

@@ -72,6 +72,7 @@ export class LeaveService {
       toDate: string;
       reason: string;
       destination: string;
+      attendance?: number;
     },
     documentPaths: string[] = [],
   ): Promise<ILeaveRequestDocument> {
@@ -114,6 +115,7 @@ export class LeaveService {
       toDate: new Date(data.toDate),
       reason: data.reason,
       destination: data.destination,
+      ...(data.attendance !== undefined ? { attendance: data.attendance } : {}),
       documents: documentPaths,
       status: LeaveStatus.PENDING_PARENT,
       currentApprovalStage: ApprovalStage.PARENT,

@@ -20,6 +20,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import './ApplyLeavePage.css';
 
 /* ─── Types ─────────────────────────────────────────────────────── */
@@ -60,6 +61,7 @@ function calcDays(from: string, to: string): number {
 export function ApplyLeavePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { error: showError } = useFeedback();
 
   // Profile state
   const [profile, setProfile] = useState<StudentProfile | null>(null);
@@ -77,12 +79,12 @@ export function ApplyLeavePage() {
   const [visitAddress, setVisitAddress]               = useState('');
   const [visitContact, setVisitContact]               = useState('');
   const [parentMobile, setParentMobile]               = useState('');
+  const [attendance, setAttendance]                   = useState('');
   const [documents, setDocuments]                     = useState<File[]>([]);
 
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors]             = useState<Record<string, string>>({});
-  const [submitError, setSubmitError]   = useState('');
   const [success, setSuccess]           = useState(false);
   const [leaveId, setLeaveId]           = useState('');
 
@@ -133,19 +135,25 @@ export function ApplyLeavePage() {
     if (!visitPersonName.trim()) e.visitPersonName = 'Name of person being visited is required';
     if (!visitAddress.trim())    e.visitAddress    = 'Address is required';
     if (!visitContact.trim())    e.visitContact    = 'Contact number is required';
+    if (attendance && (Number.isNaN(Number(attendance)) || Number(attendance) < 0 || Number(attendance) > 100)) {
+      e.attendance = 'Attendance must be between 0 and 100%';
+    }
 
     const today = new Date(); today.setHours(0, 0, 0, 0);
     if (fromDate && new Date(fromDate) < today)
                          e.fromDate   = 'From date cannot be in the past';
 
     setErrors(e);
-    return Object.keys(e).length === 0;
+    return e;
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setSubmitError('');
-    if (!validate()) return;
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      showError(Object.values(validationErrors)[0] || 'Please check the highlighted fields.');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -154,6 +162,7 @@ export function ApplyLeavePage() {
       formData.append('fromDate',    fromDate);
       formData.append('toDate',      toDate);
       formData.append('reason',      reason.trim());
+      if (attendance) formData.append('attendance', attendance);
       // destination includes extra template info
       const fullDestination = `${destination.trim()}${visitPersonName ? ` (${visitPersonName}, ${visitPersonRelation})` : ''}`;
       formData.append('destination', fullDestination);
@@ -171,9 +180,9 @@ export function ApplyLeavePage() {
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosErr = err as { response?: { data?: { message?: string } } };
-        setSubmitError(axiosErr.response?.data?.message || 'Failed to submit leave request');
+        showError(axiosErr.response?.data?.message || 'Failed to submit leave request');
       } else {
-        setSubmitError('Network error. Please try again.');
+        showError('Network error. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -225,15 +234,6 @@ export function ApplyLeavePage() {
       </div>
 
       <form onSubmit={handleSubmit} className="apply-leave__form" noValidate>
-
-        {submitError && (
-          <div className="apply-leave__alert apply-leave__alert--error" role="alert">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            {submitError}
-          </div>
-        )}
 
         {/* ── Section 1–3: Student Info (auto-filled) ────────────── */}
         <div className="apply-leave__section">
@@ -289,7 +289,6 @@ export function ApplyLeavePage() {
                 value={fromDate} min={today}
                 onChange={(e) => setFromDate(e.target.value)}
               />
-              {errors.fromDate && <span className="apply-leave__error-msg">{errors.fromDate}</span>}
             </div>
             <div className="apply-leave__field-group">
               <label className="apply-leave__label" htmlFor="to-date">To Date <span className="apply-leave__required">*</span></label>
@@ -298,7 +297,6 @@ export function ApplyLeavePage() {
                 value={toDate} min={fromDate || today}
                 onChange={(e) => setToDate(e.target.value)}
               />
-              {errors.toDate && <span className="apply-leave__error-msg">{errors.toDate}</span>}
             </div>
             <div className="apply-leave__field-group">
               <label className="apply-leave__label" htmlFor="time-out">Time Out</label>
@@ -314,6 +312,17 @@ export function ApplyLeavePage() {
           </div>
         </div>
 
+        <div className="apply-leave__section">
+          <h2 className="apply-leave__section-title">Attendance <small>(optional)</small></h2>
+          <div className="apply-leave__attendance-field">
+            <label className="apply-leave__label" htmlFor="attendance">Current attendance percentage</label>
+            <div className="apply-leave__attendance-input-wrap">
+              <input id="attendance" type="number" min="0" max="100" step="0.01" className={`apply-leave__input ${errors.attendance ? 'apply-leave__input--error' : ''}`} placeholder="e.g. 85" value={attendance} onChange={(e) => setAttendance(e.target.value)} />
+              <span>%</span>
+            </div>
+          </div>
+        </div>
+
         {/* ── Section 5: Leave Type ──────────────────────────────── */}
         <div className="apply-leave__section">
           <h2 className="apply-leave__section-title">5. Leave Type <span className="apply-leave__required">*</span></h2>
@@ -325,7 +334,6 @@ export function ApplyLeavePage() {
               </label>
             ))}
           </div>
-          {errors.leaveType && <span className="apply-leave__error-msg">{errors.leaveType}</span>}
         </div>
 
         {/* ── Section 6: Reason for Leave ────────────────────────── */}
@@ -341,7 +349,6 @@ export function ApplyLeavePage() {
             maxLength={1000}
           />
           <div className="apply-leave__char-count">{reason.length}/1000</div>
-          {errors.reason && <span className="apply-leave__error-msg">{errors.reason}</span>}
         </div>
 
         {/* ── Section 7–8: Person Being Visited ─────────────────── */}
@@ -359,7 +366,6 @@ export function ApplyLeavePage() {
                 value={visitPersonName}
                 onChange={(e) => setVisitPersonName(e.target.value)}
               />
-              {errors.visitPersonName && <span className="apply-leave__error-msg">{errors.visitPersonName}</span>}
             </div>
             <div className="apply-leave__field-group">
               <label className="apply-leave__label" htmlFor="visit-relation">Relation</label>
@@ -383,7 +389,6 @@ export function ApplyLeavePage() {
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
             />
-            {errors.destination && <span className="apply-leave__error-msg">{errors.destination}</span>}
           </div>
           <div className="apply-leave__field-group" style={{ marginTop: '12px' }}>
             <label className="apply-leave__label" htmlFor="visit-address">
@@ -405,9 +410,6 @@ export function ApplyLeavePage() {
                 onChange={(e) => setVisitContact(e.target.value)}
               />
             </div>
-            {(errors.visitAddress || errors.visitContact) && (
-              <span className="apply-leave__error-msg">{errors.visitAddress || errors.visitContact}</span>
-            )}
           </div>
         </div>
 

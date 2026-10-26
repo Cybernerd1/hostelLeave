@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { adminApi, type ApplicationRecord } from '@/services/admin.service';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import './AdminPages.css';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -28,6 +29,7 @@ export function ApplicationsListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isAdminOrChief = user?.role === 'admin' || user?.role === 'chief_warden';
+  const { error: showError } = useFeedback();
 
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
@@ -36,11 +38,9 @@ export function ApplicationsListPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
   const [page, setPage] = useState(1);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchApplications = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const res = await adminApi.getApplications({
         page,
@@ -52,7 +52,7 @@ export function ApplicationsListPage() {
       setApplications(res.data);
       setPagination({ page: res.pagination.page, totalPages: res.pagination.totalPages, total: res.pagination.total });
     } catch {
-      setError('Failed to load applications.');
+      showError('Failed to load applications.');
     } finally {
       setLoading(false);
     }
@@ -106,8 +106,6 @@ export function ApplicationsListPage() {
         </select>
         <button className="btn btn--primary btn--sm" onClick={() => { setPage(1); fetchApplications(); }}>Search</button>
       </div>
-
-      {error && <div className="error-banner">{error}</div>}
 
       <Card variant="default" padding="none">
         {loading ? (

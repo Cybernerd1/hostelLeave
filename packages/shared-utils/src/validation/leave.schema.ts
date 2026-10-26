@@ -31,6 +31,11 @@ export const createLeaveSchema = z
       .min(3, 'Destination must be at least 3 characters')
       .max(200, 'Destination must not exceed 200 characters')
       .trim(),
+    attendance: z.coerce
+      .number()
+      .min(0, 'Attendance cannot be below 0%')
+      .max(100, 'Attendance cannot exceed 100%')
+      .optional(),
   })
   .refine(
     (data) => {

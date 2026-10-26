@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { adminApi } from '@/services/admin.service';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 
 const GENDERS = [
   { value: 'male', label: 'Male' },
@@ -48,13 +49,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export function PublicRegistrationPage() {
   const { token } = useParams<{ token: string }>();
+  const { error: showError } = useFeedback();
 
   const [config, setConfig] = useState<any>(null);
   const [departments, setDepartments] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [applicationNumber, setApplicationNumber] = useState('');
   const [form, setForm] = useState({
@@ -72,7 +73,6 @@ export function PublicRegistrationPage() {
 
   const set = (key: string, value: string | number) => {
     setForm(prev => ({ ...prev, [key]: value }));
-    setError(null);
   };
 
   const isRequired = (field: string) => {
@@ -95,7 +95,7 @@ export function PublicRegistrationPage() {
       setForm(prev => ({ ...prev, academicSession: cfg.academicSession || '' }));
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || 'This form is not available or has expired.');
+      showError(e.response?.data?.message || 'This form is not available or has expired.');
     } finally {
       setLoading(false);
     }
@@ -106,14 +106,13 @@ export function PublicRegistrationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setError(null);
     try {
       const result = await adminApi.submitPublicRegistration(token!, form);
       setApplicationNumber(result.applicationNumber || result.application?.applicationNumber || '');
       setSubmitted(true);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || 'Submission failed. Please check your details and try again.');
+      showError(e.response?.data?.message || 'Submission failed. Please check your details and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -137,7 +136,7 @@ export function PublicRegistrationPage() {
         <div style={{ fontSize: 52, marginBottom: '1.25rem' }}>🔒</div>
         <h2 style={{ margin: '0 0 0.75rem', color: 'var(--text-primary)', fontSize: 'var(--font-size-2xl)' }}>Form Unavailable</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-md)', margin: 0, lineHeight: 1.6 }}>
-          {error || 'This registration link is invalid, has expired, or is no longer accepting submissions.'}
+          This registration link is invalid, has expired, or is no longer accepting submissions.
         </p>
       </div>
     </div>
@@ -330,13 +329,6 @@ export function PublicRegistrationPage() {
             <input style={inp} value={form.guardianCountry} onChange={e => set('guardianCountry', e.target.value)} placeholder="India" />
           </Field>
         </Section>
-
-        {/* Error */}
-        {error && (
-          <div style={{ background: 'var(--color-error-50)', border: `1.5px solid var(--color-error-100)`, borderRadius: 'var(--radius-lg)', padding: '0.875rem 1rem', marginBottom: '1.25rem', color: 'var(--color-error-600)', fontSize: 'var(--font-size-sm)', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-            <span style={{ flexShrink: 0 }}>⚠️</span> {error}
-          </div>
-        )}
 
         {/* Submit */}
         <div style={{ background: 'var(--color-neutral-0)', borderRadius: 'var(--radius-xl)', padding: '1.75rem', boxShadow: 'var(--shadow-md)', border: `1.5px solid var(--border-primary)`, textAlign: 'center' }}>

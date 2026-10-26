@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { adminApi } from '@/services/admin.service';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import './AdminPages.css';
 import { parse } from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -16,6 +17,7 @@ export function ImportStudentsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isAdminOrChief = user?.role === 'admin' || user?.role === 'chief_warden';
+  const { error: showError, success } = useFeedback();
 
   const [file, setFile] = useState<File | null>(null);
   const [records, setRecords] = useState<Record<string, unknown>[]>([]);
@@ -23,15 +25,11 @@ export function ImportStudentsPage() {
   const [importResult, setImportResult] = useState<{ successful: number; failed: number; duplicates: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     setFile(f);
-    setError(null);
-    setMsg(null);
     setPreview(null);
     setImportResult(null);
 
@@ -44,7 +42,7 @@ export function ImportStudentsPage() {
         if (f.name.endsWith('.csv') || f.type === 'text/csv') {
           const result = parse(content, { header: true, skipEmptyLines: true, trim: true });
           if (result.errors.length > 0) {
-            setError('CSV parsing errors: ' + result.errors.map((err: any) => err.message).join(', '));
+            showError('CSV parsing errors: ' + result.errors.map((err: any) => err.message).join(', '));
             return;
           }
           parsed = result.data as Record<string, unknown>[];
@@ -57,10 +55,10 @@ export function ImportStudentsPage() {
 
         setRecords(parsed);
       } catch (err: unknown) {
-        setError('Failed to parse file: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        showError('Failed to parse file: ' + (err instanceof Error ? err.message : 'Unknown error'));
       }
     };
-    reader.onerror = () => setError('Failed to read file.');
+    reader.onerror = () => showError('Failed to read file.');
     if (f.name.endsWith('.csv')) {
       reader.readAsText(f);
     } else {
@@ -75,7 +73,7 @@ export function ImportStudentsPage() {
           const parsed = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
           setRecords(parsed);
         } catch (err: unknown) {
-          setError('Failed to parse Excel file: ' + (err instanceof Error ? err.message : 'Unknown error'));
+          showError('Failed to parse Excel file: ' + (err instanceof Error ? err.message : 'Unknown error'));
         }
       };
     }
@@ -84,13 +82,12 @@ export function ImportStudentsPage() {
   const handlePreview = useCallback(async () => {
     if (!records.length) return;
     setLoading(true);
-    setError(null);
     try {
       const result = await adminApi.previewImport(records);
       setPreview(result);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || 'Failed to generate preview.');
+      showError(e.response?.data?.message || 'Failed to generate preview.');
     } finally {
       setLoading(false);
     }
@@ -99,7 +96,6 @@ export function ImportStudentsPage() {
   const handleImport = async () => {
     if (!records.length) return;
     setImporting(true);
-    setMsg(null);
     try {
       const result = await adminApi.importStudents(records);
       setImportResult({
@@ -107,10 +103,10 @@ export function ImportStudentsPage() {
         failed: result.failed.length,
         duplicates: result.duplicates.length,
       });
-      setMsg(`✅ Import complete: ${result.successful.length} successful, ${result.failed.length} failed, ${result.duplicates.length} duplicates.`);
+      success(`Import complete: ${result.successful.length} successful, ${result.failed.length} failed, ${result.duplicates.length} duplicates.`);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setMsg('❌ ' + (e.response?.data?.message || 'Import failed.'));
+      showError(e.response?.data?.message || 'Import failed.');
     } finally {
       setImporting(false);
     }
@@ -140,8 +136,6 @@ export function ImportStudentsPage() {
         </div>
       </div>
 
-      {error && <div className="error-banner">{error}</div>}
-      {msg && <div style={{ marginBottom: '1rem', padding: '0.75rem', borderRadius: 6, background: msg.startsWith('✅') ? '#d1fae5' : '#fee2e2', color: msg.startsWith('✅') ? '#15803d' : '#dc2626', fontSize: '0.875rem' }}>{msg}</div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
         {/* Upload Card */}

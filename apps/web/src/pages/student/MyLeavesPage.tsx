@@ -16,6 +16,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { leaveApi, type LeaveRequest } from '@/services/leave.service';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import './MyLeavesPage.css';
 
 /* ─── Constants ─────────────────────────────────────────────────── */
@@ -79,10 +80,10 @@ function isPending(status: string) {
 /* ─── Component ─────────────────────────────────────────────────── */
 export function MyLeavesPage() {
   const navigate = useNavigate();
+  const { error: showError } = useFeedback();
 
   const [leaves, setLeaves]       = useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError]         = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [page, setPage]           = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -91,21 +92,19 @@ export function MyLeavesPage() {
   const [cancellingId, setCancellingId]     = useState<string | null>(null);
   const [cancelReason, setCancelReason]     = useState('');
   const [cancelLoading, setCancelLoading]   = useState(false);
-  const [cancelError, setCancelError]       = useState('');
 
   // PDF state
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
-    setError('');
     try {
       const res = await leaveApi.getMyLeaves({ page, limit: 10 });
       setLeaves(res.data);
       const pag = res.pagination as { totalPages?: number };
       setTotalPages(pag?.totalPages ?? 1);
     } catch {
-      setError('Failed to load leave requests. Please try again.');
+      showError('Failed to load leave requests. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -132,17 +131,15 @@ export function MyLeavesPage() {
   const startCancel = (id: string) => {
     setCancellingId(id);
     setCancelReason('');
-    setCancelError('');
   };
 
   const confirmCancel = async () => {
     if (!cancellingId) return;
     if (!cancelReason.trim() || cancelReason.trim().length < 5) {
-      setCancelError('Please enter a reason (min 5 characters)');
+      showError('Please enter a reason with at least 5 characters.');
       return;
     }
     setCancelLoading(true);
-    setCancelError('');
     try {
       await leaveApi.cancelLeave(cancellingId, cancelReason.trim());
       setCancellingId(null);
@@ -150,9 +147,9 @@ export function MyLeavesPage() {
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
         const e = err as { response?: { data?: { message?: string } } };
-        setCancelError(e.response?.data?.message || 'Failed to cancel leave');
+        showError(e.response?.data?.message || 'Failed to cancel leave');
       } else {
-        setCancelError('Network error. Please try again.');
+        showError('Network error. Please try again.');
       }
     } finally {
       setCancelLoading(false);
@@ -173,7 +170,7 @@ export function MyLeavesPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {
-      // silently fail — user can retry from detail page
+      showError('Could not download PDF pass.');
     } finally {
       setPdfLoadingId(null);
     }
@@ -243,14 +240,6 @@ export function MyLeavesPage() {
       {isLoading ? (
         <div className="my-leaves__loading">
           {[1, 2, 3].map(i => <div key={i} className="my-leaves__skeleton" />)}
-        </div>
-      ) : error ? (
-        <div className="my-leaves__error-state">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          <p>{error}</p>
-          <button className="my-leaves__retry-btn" onClick={load}>Retry</button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="my-leaves__empty">
@@ -374,7 +363,6 @@ export function MyLeavesPage() {
                         value={cancelReason}
                         onChange={e => setCancelReason(e.target.value)}
                       />
-                      {cancelError && <span className="my-leaves__cancel-error">{cancelError}</span>}
                       <div className="my-leaves__cancel-actions">
                         <button
                           className="my-leaves__btn my-leaves__btn--danger"
