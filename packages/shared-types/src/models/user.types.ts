@@ -189,3 +189,107 @@ export interface IRoomPopulated extends IRoom {
   hostel?: IHostelBase;
   occupants?: IStudent[];
 }
+
+/** Student application document */
+export interface IStudentApplication {
+  _id: string;
+  applicationNumber: string;
+  status: 'pending' | 'under_review' | 'approved' | 'rejected' | 'allocated';
+  source: 'manual' | 'import' | 'public_form';
+
+  // Personal Details
+  fullName: string;
+  studentNumber: string;
+  admissionNumber?: string;
+  dateOfBirth?: Date;
+  gender: 'male' | 'female' | 'other';
+  bloodGroup?: string;
+  phoneNumber: string;
+  email: string;
+  city: string;
+  residentialAddress: string;
+
+  // Academic Details
+  departmentId: string;
+  courseId: string;
+  yearOfStudy: number;
+  semester: string;
+  admissionYear: number;
+  academicSession?: string;
+
+  // Father's Details
+  fatherName?: string;
+  fatherEmail?: string;
+  fatherPhone?: string;
+
+  // Mother's Details
+  motherName?: string;
+  motherEmail?: string;
+  motherPhone?: string;
+
+  // Parent/Guardian Address
+  guardianAddressLine1?: string;
+  guardianAddressLine2?: string;
+  guardianCity?: string;
+  guardianState?: string;
+  guardianPincode?: string;
+  guardianCountry?: string;
+
+  // Registration form reference
+  registrationFormId?: string;
+
+  // Approval workflow
+  reviewedBy?: string;
+  reviewedAt?: Date;
+  reviewNotes?: string;
+  rejectionReason?: string;
+
+  // Allocation
+  hostelId?: string;
+  roomId?: string;
+  allocatedAt?: Date;
+  allocatedBy?: string;
+
+  // Linked records
+  userId?: string;
+  studentId?: string;
+
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Registration form document */
+export interface IRegistrationForm {
+  _id: string;
+  title: string;
+  description?: string;
+  token: string;
+  academicSession?: string;
+  isActive: boolean;
+  expiresAt?: Date;
+  submissionLimit?: number;
+  submissionCount: number;
+  requiredFields: string[];
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Allocation history document */
+export interface IAllocationHistory {
+  _id: string;
+  studentId: string;
+  studentNumber: string;
+  studentName: string;
+  action: 'allocate' | 'transfer' | 'reassign' | 'deallocate';
+  previousHostelId?: string;
+  previousRoomId?: string;
+  hostelId: string;
+  roomId: string;
+  reason: string;
+  allocatedBy: string;
+  allocatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}

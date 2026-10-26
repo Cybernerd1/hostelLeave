@@ -11,6 +11,7 @@ import api from './api';
 export interface StudentRecord {
   _id: string;
   rollNumber: string;
+  studentNumber?: string;
   name: string;
   phone: string;
   gender: string;
@@ -22,6 +23,22 @@ export interface StudentRecord {
   city: string;
   state: string;
   pincode: string;
+  dateOfBirth?: string;
+  admissionNumber?: string;
+  academicSession?: string;
+  fatherName?: string;
+  fatherEmail?: string;
+  fatherPhone?: string;
+  motherName?: string;
+  motherEmail?: string;
+  motherPhone?: string;
+  guardianAddressLine1?: string;
+  guardianAddressLine2?: string;
+  guardianCity?: string;
+  guardianState?: string;
+  guardianPincode?: string;
+  guardianCountry?: string;
+  applicationStatus: 'pending' | 'approved' | 'rejected' | 'allocated';
   isActive: boolean;
   createdAt: string;
   departmentId?: { _id: string; name: string; code: string };
@@ -100,6 +117,67 @@ export interface StaffRecord {
   lastLogin?: string;
 }
 
+export interface ApplicationRecord {
+  _id: string;
+  applicationNumber: string;
+  status: string;
+  source: string;
+  fullName: string;
+  studentNumber: string;
+  admissionNumber?: string;
+  email: string;
+  phoneNumber: string;
+  gender: string;
+  bloodGroup?: string;
+  dateOfBirth?: string;
+  city: string;
+  residentialAddress: string;
+  departmentId?: { _id: string; name: string; code: string };
+  courseId?: { _id: string; name: string; code: string };
+  yearOfStudy: number;
+  semester: string;
+  admissionYear: number;
+  academicSession?: string;
+  fatherName?: string;
+  fatherEmail?: string;
+  fatherPhone?: string;
+  motherName?: string;
+  motherEmail?: string;
+  motherPhone?: string;
+  guardianAddressLine1?: string;
+  guardianAddressLine2?: string;
+  guardianCity?: string;
+  guardianState?: string;
+  guardianPincode?: string;
+  guardianCountry?: string;
+  hostelId?: { _id: string; name: string; type: string };
+  roomId?: { _id: string; roomNumber: string; floor: string };
+  reviewedBy?: { _id: string; name: string; email: string };
+  reviewedAt?: string;
+  reviewNotes?: string;
+  rejectionReason?: string;
+  allocatedAt?: string;
+  allocatedBy?: { _id: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RegistrationFormRecord {
+  _id: string;
+  title: string;
+  description?: string;
+  token: string;
+  academicSession?: string;
+  isActive: boolean;
+  expiresAt?: string;
+  submissionLimit?: number;
+  submissionCount: number;
+  requiredFields: string[];
+  createdBy: { _id: string; name: string; email: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AuditLogRecord {
   _id: string;
   userId: { _id: string; name: string; email: string; role: string } | string;
@@ -113,11 +191,14 @@ export interface AuditLogRecord {
 export interface DashboardStats {
   totalStudents: number;
   totalParents: number;
-  totalStaff: number;
-  totalLeaves: number;
-  pendingLeaves: number;
-  approvedToday: number;
-  activeLeaves: number;
+  totalDepartments: number;
+  totalHostels: number;
+  totalRooms: number;
+  totalApplications: number;
+  pendingApplications: number;
+  approvedApplications: number;
+  rejectedApplications: number;
+  allocatedStudents: number;
 }
 
 export interface PaginatedResponse<T> {
@@ -241,5 +322,110 @@ export const adminApi = {
   }): Promise<PaginatedResponse<AuditLogRecord>> => {
     const res = await api.get('/admin/audit-logs', { params });
     return { data: res.data.data, pagination: res.data.pagination };
+  },
+
+  // ─── Student Registration ──────────────────────────────────────────────
+
+  registerStudent: async (data: Record<string, unknown>): Promise<ApplicationRecord> => {
+    const res = await api.post<{ success: boolean; data: ApplicationRecord }>('/admin/students/register', data);
+    return res.data.data;
+  },
+
+  previewImport: async (records: Record<string, unknown>[]): Promise<any[]> => {
+    const res = await api.post<{ success: boolean; data: any[] }>('/admin/students/import/preview', { records });
+    return res.data.data;
+  },
+
+  importStudents: async (records: Record<string, unknown>[]): Promise<any> => {
+    const res = await api.post<{ success: boolean; data: any }>('/admin/students/import', { records });
+    return res.data.data;
+  },
+
+  // ─── Application Approval Workflow ─────────────────────────────────────
+
+  getApplications: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    source?: string;
+    departmentId?: string;
+    courseId?: string;
+    hostelId?: string;
+  }): Promise<PaginatedResponse<ApplicationRecord>> => {
+    const res = await api.get('/admin/applications', { params });
+    return { data: res.data.data, pagination: res.data.pagination };
+  },
+
+  getApplicationById: async (id: string): Promise<ApplicationRecord> => {
+    const res = await api.get<{ success: boolean; data: ApplicationRecord }>(`/admin/applications/${id}`);
+    return res.data.data;
+  },
+
+  approveRejectApplication: async (id: string, data: {
+    action: 'approve' | 'reject';
+    reviewNotes?: string;
+    rejectionReason?: string;
+    hostelId?: string;
+    roomId?: string;
+  }): Promise<ApplicationRecord> => {
+    const res = await api.post<{ success: boolean; data: ApplicationRecord }>(
+      `/admin/applications/${id}/approve-reject`,
+      data,
+    );
+    return res.data.data;
+  },
+
+  // ─── Hostel and Room Allocation ────────────────────────────────────────
+
+  allocateRoom: async (studentId: string, data: {
+    hostelId: string;
+    roomId: string;
+    reason: string;
+  }): Promise<StudentRecord> => {
+    const res = await api.post<{ success: boolean; data: StudentRecord }>(
+      `/admin/students/${studentId}/allocate`,
+      data,
+    );
+    return res.data.data;
+  },
+
+  // ─── Registration Form Management ──────────────────────────────────────
+
+  createRegistrationForm: async (data: Record<string, unknown>): Promise<RegistrationFormRecord> => {
+    const res = await api.post<{ success: boolean; data: RegistrationFormRecord }>('/admin/registration-forms', data);
+    return res.data.data;
+  },
+
+  getRegistrationForms: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<PaginatedResponse<RegistrationFormRecord>> => {
+    const res = await api.get('/admin/registration-forms', { params });
+    return { data: res.data.data, pagination: res.data.pagination };
+  },
+
+  updateRegistrationForm: async (id: string, data: Record<string, unknown>): Promise<RegistrationFormRecord> => {
+    const res = await api.put<{ success: boolean; data: RegistrationFormRecord }>(
+      `/admin/registration-forms/${id}`,
+      data,
+    );
+    return res.data.data;
+  },
+
+  // ─── Public Registration ───────────────────────────────────────────────
+
+  getPublicFormConfig: async (token: string): Promise<any> => {
+    const res = await api.get<{ success: boolean; data: any }>(`/admin/registration-forms/${token}/config`);
+    return res.data.data;
+  },
+
+  submitPublicRegistration: async (token: string, data: Record<string, unknown>): Promise<any> => {
+    const res = await api.post<{ success: boolean; data: any }>(
+      `/admin/registration-forms/${token}/submit`,
+      data,
+    );
+    return res.data.data;
   },
 };

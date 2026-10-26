@@ -12,7 +12,6 @@ import fs from 'fs';
 import { config } from '../config';
 import { generateUploadFilename } from '@hostel/shared-utils';
 import { AppError } from '../utils/AppError';
-
 // Ensure upload directory exists
 const uploadDir = path.resolve(config.upload.dir);
 if (!fs.existsSync(uploadDir)) {
@@ -94,6 +93,47 @@ export const uploadProfileImage = multer({
     files: 1,
   },
 }).single('profileImage');
+
+/**
+ * CSV/Excel upload middleware.
+ * Accepts CSV and Excel files for student import.
+ */
+const csvExcelStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, path.join(uploadDir, 'temp'));
+  },
+  filename: (_req, file, cb) => {
+    const uniqueName = generateUploadFilename(file.originalname);
+    cb(null, uniqueName);
+  },
+});
+
+const csvExcelFileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowed = [
+    'text/csv',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/csv',
+  ];
+  if (allowed.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new AppError(
+      `File type ${file.mimetype} is not allowed. Only CSV and Excel files are accepted.`,
+      400,
+      'INVALID_FILE_TYPE',
+    ));
+  }
+};
+
+export const uploadCsvExcel = multer({
+  storage: csvExcelStorage,
+  fileFilter: csvExcelFileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10 MB
+    files: 1,
+  },
+}).single('file');
 
 /**
  * Get the public URL path for an uploaded file.

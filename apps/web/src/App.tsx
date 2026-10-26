@@ -50,6 +50,13 @@ import { GuardVerifyPage } from '@/pages/guard/GuardVerifyPage';
 import { StudentsListPage } from '@/pages/admin/StudentsListPage';
 import { StudentDetailPage } from '@/pages/admin/StudentDetailPage';
 import { ParentsListPage } from '@/pages/admin/ParentsListPage';
+import { ApplicationsListPage } from '@/pages/admin/ApplicationsListPage';
+import { ApplicationDetailPage } from '@/pages/admin/ApplicationDetailPage';
+import { RegisterStudentPage } from '@/pages/admin/RegisterStudentPage';
+import { ImportStudentsPage } from '@/pages/admin/ImportStudentsPage';
+import { RegistrationFormsPage } from '@/pages/admin/RegistrationFormsPage';
+import { CreateRegistrationFormPage } from '@/pages/admin/CreateRegistrationFormPage';
+import { PublicRegistrationPage } from '@/pages/admin/PublicRegistrationPage';
 
 import { DepartmentsPage } from '@/pages/admin/DepartmentsPage';
 import { CoursesPage } from '@/pages/admin/CoursesPage';
@@ -126,6 +133,16 @@ export default function App() {
             </Route>
           </Route>
 
+          {/* ─── Shared: Applications & Reg. Forms (Admin + Chief Warden + Warden) ── */}
+          <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.CHIEF_WARDEN, UserRole.WARDEN]} />}>
+            <Route element={<DashboardLayout />}>
+              <Route path="/admin/applications" element={<ApplicationsListPage />} />
+              <Route path="/admin/applications/:id" element={<ApplicationDetailPage />} />
+              <Route path="/admin/registration-forms" element={<RegistrationFormsPage />} />
+              <Route path="/admin/registration-forms/new" element={<CreateRegistrationFormPage />} />
+            </Route>
+          </Route>
+
           {/* ─── HOD Routes ──────────────────────────────────────────── */}
           <Route element={<ProtectedRoute allowedRoles={[UserRole.HOD]} />}>
             <Route element={<DashboardLayout />}>
@@ -172,6 +189,8 @@ export default function App() {
             <Route element={<DashboardLayout />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/students" element={<StudentsListPage />} />
+              <Route path="/admin/students/register" element={<RegisterStudentPage />} />
+              <Route path="/admin/students/import" element={<ImportStudentsPage />} />
               <Route path="/admin/students/:id" element={<StudentDetailPage />} />
               <Route path="/admin/parents" element={<ParentsListPage />} />
               <Route path="/admin/departments" element={<DepartmentsPage />} />
@@ -186,6 +205,9 @@ export default function App() {
               <Route path="/admin/profile" element={<ProfilePage />} />
             </Route>
           </Route>
+
+          {/* ─── Public Registration Routes (no auth) ────────────────── */}
+          <Route path="/register/:token" element={<PublicRegistrationPage />} />
 
           {/* ─── Catch-all: redirect to home ──────────────────────── */}
           <Route path="*" element={<HomePage />} />

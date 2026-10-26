@@ -70,14 +70,15 @@ export interface TokenRefreshResponse {
 /** Dashboard stats response */
 export interface DashboardStats {
   totalStudents: number;
-  totalLeaves: number;
-  pendingLeaves: number;
-  approvedLeaves: number;
-  rejectedLeaves: number;
-  completedLeaves: number;
-  activeLeaves: number;
-  todayExits: number;
-  todayEntries: number;
+  totalParents: number;
+  totalDepartments: number;
+  totalHostels: number;
+  totalRooms: number;
+  totalApplications: number;
+  pendingApplications: number;
+  approvedApplications: number;
+  rejectedApplications: number;
+  allocatedStudents: number;
 }
 
 /** Report export response */

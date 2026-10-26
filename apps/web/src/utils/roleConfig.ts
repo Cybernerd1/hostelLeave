@@ -72,6 +72,10 @@ const ICONS = {
     'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z',
   hostelManage:
     'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+  applications:
+    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+  registrationForms:
+    'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
 };
 
 
@@ -109,6 +113,7 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
       { label: 'Dashboard', path: '/warden/dashboard', icon: ICONS.dashboard },
       { label: 'Approvals', path: '/warden/approvals', icon: ICONS.approvals },
       { label: 'All Leaves', path: '/warden/leaves', icon: ICONS.leaves },
+      { label: 'Applications', path: '/admin/applications', icon: ICONS.applications },
       { label: 'Reports', path: '/warden/reports', icon: ICONS.reports },
       { label: 'Notifications', path: '/warden/notifications', icon: ICONS.notifications },
       { label: 'Profile', path: '/warden/profile', icon: ICONS.profile },
@@ -125,6 +130,8 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
       { label: 'Approvals', path: '/chief-warden/approvals', icon: ICONS.approvals },
       { label: 'All Leaves', path: '/chief-warden/leaves', icon: ICONS.leaves },
       { label: 'Students', path: '/chief-warden/students', icon: ICONS.students },
+      { label: 'Applications', path: '/admin/applications', icon: ICONS.applications },
+      { label: 'Reg. Forms', path: '/admin/registration-forms', icon: ICONS.registrationForms },
       { label: 'Manage Hostels', path: '/chief-warden/manage', icon: ICONS.hostelManage },
       { label: 'Reports', path: '/chief-warden/reports', icon: ICONS.reports },
       { label: 'Notifications', path: '/chief-warden/notifications', icon: ICONS.notifications },
@@ -184,12 +191,15 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
     navItems: [
       { label: 'Dashboard', path: '/admin/dashboard', icon: ICONS.dashboard },
       { label: 'Students', path: '/admin/students', icon: ICONS.students },
+      { label: 'Applications', path: '/admin/applications', icon: ICONS.applications },
+      { label: 'Reg. Forms', path: '/admin/registration-forms', icon: ICONS.registrationForms },
       { label: 'Parents', path: '/admin/parents', icon: ICONS.parents },
       { label: 'Departments', path: '/admin/departments', icon: ICONS.departments },
       { label: 'Courses', path: '/admin/courses', icon: ICONS.courses },
       { label: 'Hostels', path: '/admin/hostels', icon: ICONS.hostels },
       { label: 'Rooms', path: '/admin/rooms', icon: ICONS.rooms },
       { label: 'Staff', path: '/admin/staff', icon: ICONS.staff },
+      { label: 'Import Students', path: '/admin/students/import', icon: ICONS.scan },
       { label: 'All Leaves', path: '/admin/leaves', icon: ICONS.leaves },
       { label: 'Reports', path: '/admin/reports', icon: ICONS.reports },
       { label: 'Audit Logs', path: '/admin/audit-logs', icon: ICONS.auditLogs },

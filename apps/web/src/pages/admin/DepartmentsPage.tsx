@@ -63,3 +63,6 @@ export function DepartmentsPage() {
     </div>
   );
 }
+
+
+

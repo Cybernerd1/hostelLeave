@@ -27,6 +27,7 @@ export type {
   IUserSafe,
   IStudent,
   IStudentPopulated,
+  IStudentApplication,
   IParent,
   IParentPopulated,
   IDepartment,
@@ -41,6 +42,8 @@ export type {
   IRoom,
   IRoomBase,
   IRoomPopulated,
+  IRegistrationForm,
+  IAllocationHistory,
 } from './models/user.types';
 
 export type {
@@ -91,6 +94,7 @@ export type {
   UpdateUserRequest,
   CreateStudentRequest,
   UpdateStudentRequest,
+  RegisterStudentRequest,
   CreateParentRequest,
   UpdateParentRequest,
   CreateDepartmentRequest,
@@ -103,10 +107,17 @@ export type {
   UpdateRoomRequest,
   CreateStaffRequest,
   AssignStaffRequest,
+  ApproveApplicationRequest,
+  AllocateRoomRequest,
+  TransferRoomRequest,
+  CreateRegistrationFormRequest,
+  UpdateRegistrationFormRequest,
+  PublicRegistrationSubmitRequest,
   // Query params
   PaginationQuery,
   LeaveFilterQuery,
   StudentFilterQuery,
+  ApplicationFilterQuery,
   GuardLogFilterQuery,
   AuditLogFilterQuery,
 } from './api/request.types';

@@ -4,6 +4,11 @@
 
 /* ─── CSS Custom Properties ─────────────────────────────────────── */
 :root {
+  color-scheme: light;
+  /* Force light color scheme — prevents browser dark-mode from
+     inverting the carefully designed paper-and-ink palette. */
+  color-scheme: light;
+
   /* Primary — Institutional Ink (AKGEC portal action color).
      Deep charcoal pairs with the AKGEC yellow accent used sparingly
      for markers, selection and active states (see --color-accent-*). */

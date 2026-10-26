@@ -92,7 +92,8 @@
 .lp-panel__copy {
   font-size: 0.9375rem;
   line-height: 1.65;
-  color: rgba(244, 241, 232, 0.72);
+  /* Increased from 0.72 — better legibility on dark background */
+  color: rgba(244, 241, 232, 0.88);
   max-width: 26rem;
   margin: 0;
 }

@@ -1,7 +1,6 @@
-/** Admin: Student Detail Page */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { adminApi, type StudentRecord, type ParentRecord } from '@/services/admin.service';
+import { adminApi, type StudentRecord } from '@/services/admin.service';
 import { Card } from '@/components/ui/Card';
 import '../shared/ApprovalsPage.css';
 import './AdminPages.css';
@@ -13,21 +12,19 @@ export function StudentDetailPage() {
   const [loading, setLoading] = useState(true);
 
   // Assign parent
-  const [parents, setParents] = useState<ParentRecord[]>([]);
   const [selectedParentId, setSelectedParentId] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [assignMsg, setAssignMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([
-      adminApi.getStudentById(id),
-      adminApi.getParents({ limit: 100 }),
-    ]).then(([s, p]) => {
-      setStudent(s);
-      setParents(p.data);
-      if (s.parentId) setSelectedParentId(s.parentId._id);
-    }).catch(() => setStudent(null)).finally(() => setLoading(false));
+    adminApi.getStudentById(id)
+      .then(s => {
+        setStudent(s);
+        if (s.parentId) setSelectedParentId((s.parentId as unknown as { _id: string })._id);
+      })
+      .catch(() => setStudent(null))
+      .finally(() => setLoading(false));
   }, [id]);
 
   const handleAssign = async () => {
@@ -51,6 +48,14 @@ export function StudentDetailPage() {
   if (!student) return <div className="table-empty"><p>Student not found.</p></div>;
 
   const initials = student.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+
+  const statusConfig: Record<string, { label: string; color: string }> = {
+    pending: { label: 'Pending', color: 'pending' },
+    approved: { label: 'Approved', color: 'approved' },
+    rejected: { label: 'Rejected', color: 'rejected' },
+    allocated: { label: 'Allocated', color: 'success' },
+  };
+  const appStatus = student.applicationStatus ? statusConfig[student.applicationStatus] : { label: '—', color: 'neutral' };
 
   return (
     <div className="approvals-page animate-fade-in-up">
@@ -76,10 +81,17 @@ export function StudentDetailPage() {
           <div className="detail-section">
             <p className="detail-section__title">Personal Details</p>
             <div className="detail-rows">
+              <div className="detail-row"><span className="detail-label">Student Number</span><span className="detail-value">{student.studentNumber || '—'}</span></div>
               <div className="detail-row"><span className="detail-label">Gender</span><span className="detail-value">{student.gender}</span></div>
               <div className="detail-row"><span className="detail-label">Blood Group</span><span className="detail-value">{student.bloodGroup || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Date of Birth</span><span className="detail-value">{student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : '—'}</span></div>
               <div className="detail-row"><span className="detail-label">Phone</span><span className="detail-value">{student.phone}</span></div>
-              <div className="detail-row"><span className="detail-label">City</span><span className="detail-value">{student.city}, {student.state}</span></div>
+              <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value">{student.userId?.email || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">City</span><span className="detail-value">{student.city}</span></div>
+              <div className="detail-row"><span className="detail-label">Residential Address</span><span className="detail-value">{student.address}</span></div>
+              <div className="detail-row"><span className="detail-label">Application Status</span>
+                <span className={`status-badge status-badge--${appStatus.color}`}>{appStatus.label}</span>
+              </div>
               <div className="detail-row"><span className="detail-label">Status</span>
                 <span className={`status-badge status-badge--${student.isActive ? 'approved' : 'rejected'}`}>
                   {student.isActive ? 'Active' : 'Inactive'}
@@ -96,16 +108,57 @@ export function StudentDetailPage() {
             <div className="detail-rows">
               <div className="detail-row"><span className="detail-label">Department</span><span className="detail-value">{(student.departmentId as unknown as { name: string })?.name || '—'}</span></div>
               <div className="detail-row"><span className="detail-label">Course</span><span className="detail-value">{(student.courseId as unknown as { name: string })?.name || '—'}</span></div>
-              <div className="detail-row"><span className="detail-label">Year</span><span className="detail-value">{student.year}</span></div>
+              <div className="detail-row"><span className="detail-label">Year of Study</span><span className="detail-value">{student.year}</span></div>
               <div className="detail-row"><span className="detail-label">Semester</span><span className="detail-value">{student.semester}</span></div>
               <div className="detail-row"><span className="detail-label">Admission Year</span><span className="detail-value">{student.admissionYear}</span></div>
+              <div className="detail-row"><span className="detail-label">Academic Session</span><span className="detail-value">{student.academicSession || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Admission Number</span><span className="detail-value">{student.admissionNumber || '—'}</span></div>
             </div>
           </div>
           <div className="detail-section">
             <p className="detail-section__title">Hostel Details</p>
             <div className="detail-rows">
-              <div className="detail-row"><span className="detail-label">Hostel</span><span className="detail-value">{(student.hostelId as unknown as { name: string })?.name || '—'}</span></div>
-              <div className="detail-row"><span className="detail-label">Room</span><span className="detail-value">{(student.roomId as unknown as { roomNumber: string })?.roomNumber || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Hostel</span><span className="detail-value">{(student.hostelId as unknown as { name: string })?.name || 'Not Assigned'}</span></div>
+              <div className="detail-row"><span className="detail-label">Room</span><span className="detail-value">{(student.roomId as unknown as { roomNumber: string })?.roomNumber || 'Not Assigned'}</span></div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Father's Details */}
+        <Card variant="default" padding="lg">
+          <div className="detail-section">
+            <p className="detail-section__title">Father's Details</p>
+            <div className="detail-rows">
+              <div className="detail-row"><span className="detail-label">Full Name</span><span className="detail-value">{student.fatherName || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value">{student.fatherEmail || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Phone</span><span className="detail-value">{student.fatherPhone || '—'}</span></div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Mother's Details */}
+        <Card variant="default" padding="lg">
+          <div className="detail-section">
+            <p className="detail-section__title">Mother's Details</p>
+            <div className="detail-rows">
+              <div className="detail-row"><span className="detail-label">Full Name</span><span className="detail-value">{student.motherName || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value">{student.motherEmail || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Phone</span><span className="detail-value">{student.motherPhone || '—'}</span></div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Guardian Address */}
+        <Card variant="default" padding="lg">
+          <div className="detail-section">
+            <p className="detail-section__title">Parent / Guardian Address</p>
+            <div className="detail-rows">
+              <div className="detail-row"><span className="detail-label">Address Line 1</span><span className="detail-value">{student.guardianAddressLine1 || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Address Line 2</span><span className="detail-value">{student.guardianAddressLine2 || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">City</span><span className="detail-value">{student.guardianCity || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">State</span><span className="detail-value">{student.guardianState || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">PIN Code</span><span className="detail-value">{student.guardianPincode || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Country</span><span className="detail-value">{student.guardianCountry || '—'}</span></div>
             </div>
           </div>
         </Card>
@@ -149,3 +202,7 @@ export function StudentDetailPage() {
     </div>
   );
 }
+
+
+
+

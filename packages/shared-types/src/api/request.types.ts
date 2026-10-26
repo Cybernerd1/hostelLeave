@@ -246,6 +246,121 @@ export interface AssignStaffRequest {
   staffId: string;
 }
 
+// ─── Admin: Student Registration ───────────────────────────────────────────
+
+export interface RegisterStudentRequest {
+  email: string;
+  password: string;
+  rollNumber: string;
+  studentNumber?: string;
+  name: string;
+  phone: string;
+  gender: Gender;
+  dateOfBirth?: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  departmentId: string;
+  courseId: string;
+  year: number;
+  semester: string;
+  admissionYear: number;
+  bloodGroup?: string;
+  admissionNumber?: string;
+  academicSession?: string;
+  fatherName?: string;
+  fatherEmail?: string;
+  fatherPhone?: string;
+  motherName?: string;
+  motherEmail?: string;
+  motherPhone?: string;
+  guardianAddressLine1?: string;
+  guardianAddressLine2?: string;
+  guardianCity?: string;
+  guardianState?: string;
+  guardianPincode?: string;
+  guardianCountry?: string;
+}
+
+export interface ApplicationFilterQuery extends PaginationQuery {
+  status?: string;
+  source?: string;
+  departmentId?: string;
+  courseId?: string;
+  hostelId?: string;
+}
+
+export interface ApproveApplicationRequest {
+  action: 'approve' | 'reject';
+  reviewNotes?: string;
+  rejectionReason?: string;
+  hostelId?: string;
+  roomId?: string;
+}
+
+export interface AllocateRoomRequest {
+  hostelId: string;
+  roomId: string;
+  reason: string;
+}
+
+export interface TransferRoomRequest {
+  hostelId: string;
+  roomId: string;
+  reason: string;
+}
+
+export interface CreateRegistrationFormRequest {
+  title: string;
+  description?: string;
+  academicSession?: string;
+  expiresAt?: string;
+  submissionLimit?: number;
+  requiredFields?: string[];
+}
+
+export interface UpdateRegistrationFormRequest {
+  title?: string;
+  description?: string;
+  academicSession?: string;
+  isActive?: boolean;
+  expiresAt?: string;
+  submissionLimit?: number;
+  requiredFields?: string[];
+}
+
+export interface PublicRegistrationSubmitRequest {
+  fullName: string;
+  studentNumber: string;
+  admissionNumber?: string;
+  dateOfBirth?: string;
+  gender: Gender;
+  bloodGroup?: string;
+  phoneNumber: string;
+  email: string;
+  city: string;
+  residentialAddress: string;
+  departmentId: string;
+  courseId: string;
+  yearOfStudy: number;
+  semester: string;
+  admissionYear: number;
+  academicSession?: string;
+  fatherName?: string;
+  fatherEmail?: string;
+  fatherPhone?: string;
+  motherName?: string;
+  motherEmail?: string;
+  motherPhone?: string;
+  guardianAddressLine1?: string;
+  guardianAddressLine2?: string;
+  guardianCity?: string;
+  guardianState?: string;
+  guardianPincode?: string;
+  guardianCountry?: string;
+}
+
 // ─── Query Parameters ───────────────────────────────────────────────────────
 
 export interface PaginationQuery {
