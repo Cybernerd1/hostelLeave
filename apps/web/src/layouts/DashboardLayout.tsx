@@ -12,10 +12,19 @@ import './DashboardLayout.css';
 
 export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('hostel-portal-sidebar-collapsed') === 'true');
+
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      localStorage.setItem('hostel-portal-sidebar-collapsed', String(next));
+      return next;
+    });
+  };
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className={`dashboard-layout ${sidebarCollapsed ? 'dashboard-layout--sidebar-collapsed' : ''}`}>
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} isCollapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebarCollapsed} />
       <Header onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
       <main className="dashboard-layout__main">
         <div className="dashboard-layout__content">

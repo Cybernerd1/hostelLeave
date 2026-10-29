@@ -18,6 +18,7 @@ export interface ILeaveRequestDocument extends Document {
   toDate: Date;
   reason: string;
   destination: string;
+  attendance?: number;
   documents: string[];
   status: LeaveStatus;
   currentApprovalStage: ApprovalStage;
@@ -74,6 +75,7 @@ const leaveRequestSchema = new Schema<ILeaveRequestDocument>(
       trim: true,
       maxlength: 200,
     },
+    attendance: { type: Number, min: 0, max: 100 },
     documents: [{ type: String }],
     status: {
       type: String,

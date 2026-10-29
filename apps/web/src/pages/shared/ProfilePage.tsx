@@ -8,37 +8,37 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
 import api from '@/services/api';
 import { getRoleLabel } from '@/utils/roleConfig';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import './ProfilePage.css';
 
 export function ProfilePage() {
   const { user } = useAuth();
+  const { error: showError, success } = useFeedback();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMsg(null);
     if (newPassword !== confirmPassword) {
-      setMsg({ type: 'error', text: 'New passwords do not match.' });
+      showError('New passwords do not match.');
       return;
     }
     if (newPassword.length < 6) {
-      setMsg({ type: 'error', text: 'Password must be at least 6 characters.' });
+      showError('Password must be at least 6 characters.');
       return;
     }
     setSaving(true);
     try {
       await api.put('/auth/change-password', { currentPassword, newPassword });
-      setMsg({ type: 'success', text: 'Password changed successfully.' });
+      success('Password changed successfully.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
-      setMsg({ type: 'error', text: axiosErr.response?.data?.message || 'Failed to change password.' });
+      showError(axiosErr.response?.data?.message || 'Failed to change password.');
     } finally {
       setSaving(false);
     }
@@ -50,6 +50,13 @@ export function ProfilePage() {
     .slice(0, 2)
     .join('')
     .toUpperCase() ?? '?';
+
+  const studentProfile = user?.role === 'student' ? user.profile as {
+    hostelId?: { name?: string };
+    roomId?: { roomNumber?: string; capacity?: number };
+    allocatedAt?: string;
+    allocationStatus?: string;
+  } | undefined : undefined;
 
   return (
     <div className="profile-page animate-fade-in-up">
@@ -85,6 +92,19 @@ export function ProfilePage() {
             </div>
           </div>
         </Card>
+
+        {user?.role === 'student' && (
+          <Card variant="default" padding="lg">
+            <h3 className="profile-section__title">Hostel Allocation</h3>
+            <div className="profile-card__details">
+              <div className="profile-detail-row"><span className="profile-detail-label">Status</span><span className="profile-detail-value">{studentProfile?.allocationStatus === 'active' || studentProfile?.roomId ? 'Allocated' : 'Awaiting Hostel Allocation'}</span></div>
+              <div className="profile-detail-row"><span className="profile-detail-label">Hostel</span><span className="profile-detail-value">{studentProfile?.hostelId?.name || '—'}</span></div>
+              <div className="profile-detail-row"><span className="profile-detail-label">Room</span><span className="profile-detail-value">{studentProfile?.roomId?.roomNumber || '—'}</span></div>
+              <div className="profile-detail-row"><span className="profile-detail-label">Room Capacity</span><span className="profile-detail-value">{studentProfile?.roomId?.capacity ?? '—'}</span></div>
+              <div className="profile-detail-row"><span className="profile-detail-label">Allocation Date</span><span className="profile-detail-value">{studentProfile?.allocatedAt ? new Date(studentProfile.allocatedAt).toLocaleDateString() : '—'}</span></div>
+            </div>
+          </Card>
+        )}
 
         {/* Change Password */}
         <Card variant="default" padding="lg">
@@ -127,9 +147,6 @@ export function ProfilePage() {
                 autoComplete="new-password"
               />
             </div>
-            {msg && (
-              <div className={`form-message form-message--${msg.type}`}>{msg.text}</div>
-            )}
             <button type="submit" className="btn btn--primary" disabled={saving}>
               {saving ? 'Saving…' : 'Update Password'}
             </button>

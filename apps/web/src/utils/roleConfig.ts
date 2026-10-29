@@ -22,6 +22,15 @@ export interface NavItem {
   label: string;
   path: string;
   icon: string; // SVG path data
+  end?: boolean;
+  matchPaths?: string[];
+}
+
+export interface NavGroup {
+  id: string;
+  label: string;
+  icon: string;
+  items: NavItem[];
 }
 
 export interface RoleConfig {
@@ -29,7 +38,7 @@ export interface RoleConfig {
   dashboardPath: string;
   basePath: string;
   accent: string;
-  navItems: NavItem[];
+  navGroups: NavGroup[];
 }
 
 // ─── SVG Icon Paths (24x24 viewBox) ────────────────────────────────
@@ -72,8 +81,14 @@ const ICONS = {
     'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z',
   hostelManage:
     'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+  applications:
+    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+  registrationForms:
+    'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
 };
 
+
+const group = (id: string, label: string, icon: string, items: NavItem[]): NavGroup => ({ id, label, icon, items });
 
 const roleConfigs: Record<UserRole, RoleConfig> = {
   [UserRole.STUDENT]: {
@@ -81,12 +96,14 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
     dashboardPath: '/student/dashboard',
     basePath: '/student',
     accent: '#6366f1',
-    navItems: [
-      { label: 'Dashboard', path: '/student/dashboard', icon: ICONS.dashboard },
-      { label: 'My Leaves', path: '/student/leaves', icon: ICONS.leaves },
-      { label: 'Apply Leave', path: '/student/leaves/new', icon: ICONS.addLeave },
-      { label: 'Notifications', path: '/student/notifications', icon: ICONS.notifications },
-      { label: 'Profile', path: '/student/profile', icon: ICONS.profile },
+    navGroups: [
+      group('overview', 'Overview', ICONS.dashboard, [{ label: 'My Dashboard', path: '/student/dashboard', icon: ICONS.dashboard, end: true }]),
+      group('leave-management', 'Leave Management', ICONS.leaves, [
+        { label: 'Apply for Leave', path: '/student/leaves/new', icon: ICONS.addLeave },
+        { label: 'My Leave Requests', path: '/student/leaves', icon: ICONS.leaves, end: true },
+      ]),
+      group('communication', 'Communication', ICONS.notifications, [{ label: 'Notifications', path: '/student/notifications', icon: ICONS.notifications }]),
+      group('account', 'My Account', ICONS.profile, [{ label: 'My Profile', path: '/student/profile', icon: ICONS.profile }]),
     ],
   },
   [UserRole.PARENT]: {
@@ -94,10 +111,11 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
     dashboardPath: '/parent/dashboard',
     basePath: '/parent',
     accent: '#8b5cf6',
-    navItems: [
-      { label: 'Dashboard', path: '/parent/dashboard', icon: ICONS.dashboard },
-      { label: 'Approvals', path: '/parent/approvals', icon: ICONS.approvals },
-      { label: 'Notifications', path: '/parent/notifications', icon: ICONS.notifications },
+    navGroups: [
+      group('overview', 'Overview', ICONS.dashboard, [{ label: 'Dashboard', path: '/parent/dashboard', icon: ICONS.dashboard, end: true }]),
+      group('leave-information', 'Leave Information', ICONS.leaves, [{ label: 'Leave Requests & Status', path: '/parent/approvals', icon: ICONS.approvals, matchPaths: ['/parent/leaves'] }]),
+      group('communication', 'Communication', ICONS.notifications, [{ label: 'Notifications', path: '/parent/notifications', icon: ICONS.notifications }]),
+      group('account', 'My Account', ICONS.profile, [{ label: 'Profile', path: '/parent/profile', icon: ICONS.profile }]),
     ],
   },
   [UserRole.WARDEN]: {
@@ -105,13 +123,16 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
     dashboardPath: '/warden/dashboard',
     basePath: '/warden',
     accent: '#0ea5e9',
-    navItems: [
-      { label: 'Dashboard', path: '/warden/dashboard', icon: ICONS.dashboard },
-      { label: 'Approvals', path: '/warden/approvals', icon: ICONS.approvals },
-      { label: 'All Leaves', path: '/warden/leaves', icon: ICONS.leaves },
-      { label: 'Reports', path: '/warden/reports', icon: ICONS.reports },
-      { label: 'Notifications', path: '/warden/notifications', icon: ICONS.notifications },
-      { label: 'Profile', path: '/warden/profile', icon: ICONS.profile },
+    navGroups: [
+      group('overview', 'Overview', ICONS.dashboard, [{ label: 'Dashboard', path: '/warden/dashboard', icon: ICONS.dashboard, end: true }]),
+      group('student-management', 'Student Management', ICONS.students, [{ label: 'Applications & Approvals', path: '/admin/applications', icon: ICONS.applications }]),
+      group('leave-management', 'Leave Management', ICONS.leaves, [
+        { label: 'Pending Leave Requests', path: '/warden/approvals', icon: ICONS.approvals },
+        { label: 'All Leaves', path: '/warden/leaves', icon: ICONS.leaves },
+      ]),
+      group('reports', 'Reports & Insights', ICONS.reports, [{ label: 'Reports', path: '/warden/reports', icon: ICONS.reports }]),
+      group('communication', 'Communication', ICONS.notifications, [{ label: 'Notifications', path: '/warden/notifications', icon: ICONS.notifications }]),
+      group('account', 'My Account', ICONS.profile, [{ label: 'Profile', path: '/warden/profile', icon: ICONS.profile }]),
     ],
   },
 
@@ -120,15 +141,24 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
     dashboardPath: '/chief-warden/dashboard',
     basePath: '/chief-warden',
     accent: '#0891b2',
-    navItems: [
-      { label: 'Dashboard', path: '/chief-warden/dashboard', icon: ICONS.dashboard },
-      { label: 'Approvals', path: '/chief-warden/approvals', icon: ICONS.approvals },
-      { label: 'All Leaves', path: '/chief-warden/leaves', icon: ICONS.leaves },
-      { label: 'Students', path: '/chief-warden/students', icon: ICONS.students },
-      { label: 'Manage Hostels', path: '/chief-warden/manage', icon: ICONS.hostelManage },
-      { label: 'Reports', path: '/chief-warden/reports', icon: ICONS.reports },
-      { label: 'Notifications', path: '/chief-warden/notifications', icon: ICONS.notifications },
-      { label: 'Profile', path: '/chief-warden/profile', icon: ICONS.profile },
+    navGroups: [
+      group('overview', 'Overview', ICONS.dashboard, [{ label: 'Dashboard', path: '/chief-warden/dashboard', icon: ICONS.dashboard, end: true }]),
+      group('student-management', 'Student Management', ICONS.students, [
+        { label: 'All Students', path: '/chief-warden/students', icon: ICONS.students },
+        { label: 'Applications & Approvals', path: '/admin/applications', icon: ICONS.applications },
+        { label: 'Registration Forms', path: '/admin/registration-forms', icon: ICONS.registrationForms },
+      ]),
+      group('hostel-management', 'Hostel Management', ICONS.hostels, [
+        { label: 'Manage Hostels', path: '/chief-warden/manage', icon: ICONS.hostelManage },
+        { label: 'Hostels & Rooms', path: '/admin/hostels', icon: ICONS.hostels },
+      ]),
+      group('leave-management', 'Leave Management', ICONS.leaves, [
+        { label: 'Pending Approvals', path: '/chief-warden/approvals', icon: ICONS.approvals },
+        { label: 'All Leaves', path: '/chief-warden/leaves', icon: ICONS.leaves },
+      ]),
+      group('reports', 'Reports & Insights', ICONS.reports, [{ label: 'Reports', path: '/chief-warden/reports', icon: ICONS.reports }]),
+      group('communication', 'Communication', ICONS.notifications, [{ label: 'Notifications', path: '/chief-warden/notifications', icon: ICONS.notifications }]),
+      group('account', 'My Account', ICONS.profile, [{ label: 'Profile', path: '/chief-warden/profile', icon: ICONS.profile }]),
     ],
   },
 
@@ -137,14 +167,13 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
     dashboardPath: '/hod/dashboard',
     basePath: '/hod',
     accent: '#059669',
-    navItems: [
-      { label: 'Dashboard', path: '/hod/dashboard', icon: ICONS.dashboard },
-      { label: 'Approvals', path: '/hod/approvals', icon: ICONS.approvals },
-      { label: 'All Leaves', path: '/hod/leaves', icon: ICONS.leaves },
-      { label: 'Students', path: '/hod/students', icon: ICONS.students },
-      { label: 'Reports', path: '/hod/reports', icon: ICONS.reports },
-      { label: 'Notifications', path: '/hod/notifications', icon: ICONS.notifications },
-      { label: 'Profile', path: '/hod/profile', icon: ICONS.profile },
+    navGroups: [
+      group('overview', 'Overview', ICONS.dashboard, [{ label: 'Dashboard', path: '/hod/dashboard', icon: ICONS.dashboard, end: true }]),
+      group('student-management', 'Student Management', ICONS.students, [{ label: 'Students', path: '/hod/students', icon: ICONS.students }]),
+      group('leave-management', 'Leave Management', ICONS.leaves, [{ label: 'Pending Approvals', path: '/hod/approvals', icon: ICONS.approvals }, { label: 'All Leaves', path: '/hod/leaves', icon: ICONS.leaves }]),
+      group('reports', 'Reports & Insights', ICONS.reports, [{ label: 'Reports', path: '/hod/reports', icon: ICONS.reports }]),
+      group('communication', 'Communication', ICONS.notifications, [{ label: 'Notifications', path: '/hod/notifications', icon: ICONS.notifications }]),
+      group('account', 'My Account', ICONS.profile, [{ label: 'Profile', path: '/hod/profile', icon: ICONS.profile }]),
     ],
   },
 
@@ -153,12 +182,12 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
     dashboardPath: '/director/dashboard',
     basePath: '/director',
     accent: '#d97706',
-    navItems: [
-      { label: 'Dashboard', path: '/director/dashboard', icon: ICONS.dashboard },
-      { label: 'All Leaves', path: '/director/leaves', icon: ICONS.leaves },
-      { label: 'Reports', path: '/director/reports', icon: ICONS.reports },
-      { label: 'Notifications', path: '/director/notifications', icon: ICONS.notifications },
-      { label: 'Profile', path: '/director/profile', icon: ICONS.profile },
+    navGroups: [
+      group('overview', 'Overview', ICONS.dashboard, [{ label: 'Dashboard', path: '/director/dashboard', icon: ICONS.dashboard, end: true }]),
+      group('leave-management', 'Leave Management', ICONS.leaves, [{ label: 'All Leaves', path: '/director/leaves', icon: ICONS.leaves }]),
+      group('reports', 'Reports & Insights', ICONS.reports, [{ label: 'Reports', path: '/director/reports', icon: ICONS.reports }]),
+      group('communication', 'Communication', ICONS.notifications, [{ label: 'Notifications', path: '/director/notifications', icon: ICONS.notifications }]),
+      group('account', 'My Account', ICONS.profile, [{ label: 'Profile', path: '/director/profile', icon: ICONS.profile }]),
     ],
   },
 
@@ -167,12 +196,11 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
     dashboardPath: '/guard/dashboard',
     basePath: '/guard',
     accent: '#dc2626',
-    navItems: [
-      { label: 'Dashboard', path: '/guard/dashboard', icon: ICONS.dashboard },
-      { label: 'Scan QR', path: '/guard/scan', icon: ICONS.scan },
-      { label: 'Gate Log', path: '/guard/log', icon: ICONS.gateLog },
-      { label: 'Notifications', path: '/guard/notifications', icon: ICONS.notifications },
-      { label: 'Profile', path: '/guard/profile', icon: ICONS.profile },
+    navGroups: [
+      group('overview', 'Overview', ICONS.dashboard, [{ label: 'Dashboard', path: '/guard/dashboard', icon: ICONS.dashboard, end: true }]),
+      group('gate-operations', 'Gate Operations', ICONS.scan, [{ label: 'Scan QR', path: '/guard/scan', icon: ICONS.scan }, { label: 'Gate Log', path: '/guard/log', icon: ICONS.gateLog }]),
+      group('communication', 'Communication', ICONS.notifications, [{ label: 'Notifications', path: '/guard/notifications', icon: ICONS.notifications }]),
+      group('account', 'My Account', ICONS.profile, [{ label: 'Profile', path: '/guard/profile', icon: ICONS.profile }]),
     ],
   },
 
@@ -181,19 +209,24 @@ const roleConfigs: Record<UserRole, RoleConfig> = {
     dashboardPath: '/admin/dashboard',
     basePath: '/admin',
     accent: '#4f46e5',
-    navItems: [
-      { label: 'Dashboard', path: '/admin/dashboard', icon: ICONS.dashboard },
-      { label: 'Students', path: '/admin/students', icon: ICONS.students },
-      { label: 'Parents', path: '/admin/parents', icon: ICONS.parents },
-      { label: 'Departments', path: '/admin/departments', icon: ICONS.departments },
-      { label: 'Courses', path: '/admin/courses', icon: ICONS.courses },
-      { label: 'Hostels', path: '/admin/hostels', icon: ICONS.hostels },
-      { label: 'Rooms', path: '/admin/rooms', icon: ICONS.rooms },
-      { label: 'Staff', path: '/admin/staff', icon: ICONS.staff },
-      { label: 'All Leaves', path: '/admin/leaves', icon: ICONS.leaves },
-      { label: 'Reports', path: '/admin/reports', icon: ICONS.reports },
-      { label: 'Audit Logs', path: '/admin/audit-logs', icon: ICONS.auditLogs },
-      { label: 'Notifications', path: '/admin/notifications', icon: ICONS.notifications },
+    navGroups: [
+      group('overview', 'Overview', ICONS.dashboard, [{ label: 'Dashboard', path: '/admin/dashboard', icon: ICONS.dashboard, end: true }]),
+      group('student-management', 'Student Management', ICONS.students, [
+        { label: 'All Students', path: '/admin/students', icon: ICONS.students },
+        { label: 'Applications & Approvals', path: '/admin/applications', icon: ICONS.applications },
+        { label: 'Registration Forms', path: '/admin/registration-forms', icon: ICONS.registrationForms },
+        { label: 'Import Students', path: '/admin/students/import', icon: ICONS.scan },
+        { label: 'Parents / Guardians', path: '/admin/parents', icon: ICONS.parents },
+      ]),
+      group('hostel-management', 'Hostel Management', ICONS.hostels, [
+        { label: 'All Hostels', path: '/admin/hostels', icon: ICONS.hostels },
+        { label: 'Rooms & Bed Capacity', path: '/admin/rooms', icon: ICONS.rooms },
+      ]),
+      group('academic-setup', 'Academic Setup', ICONS.departments, [{ label: 'Departments', path: '/admin/departments', icon: ICONS.departments }, { label: 'Courses', path: '/admin/courses', icon: ICONS.courses }]),
+      group('leave-management', 'Leave Management', ICONS.leaves, [{ label: 'All Leaves', path: '/admin/leaves', icon: ICONS.leaves }]),
+      group('staff-management', 'Staff Management', ICONS.staff, [{ label: 'Staff Directory', path: '/admin/staff', icon: ICONS.staff }]),
+      group('reports', 'Reports & Insights', ICONS.reports, [{ label: 'Reports', path: '/admin/reports', icon: ICONS.reports }]),
+      group('system', 'System', ICONS.auditLogs, [{ label: 'Audit Logs', path: '/admin/audit-logs', icon: ICONS.auditLogs }, { label: 'Notifications', path: '/admin/notifications', icon: ICONS.notifications }, { label: 'Profile', path: '/admin/profile', icon: ICONS.profile }]),
     ],
   },
 };

@@ -99,6 +99,7 @@ export const getPublicLeaveInfo = asyncHandler(async (req: Request, res: Respons
     fromDate: leaveRequest.fromDate,
     toDate: leaveRequest.toDate,
     destination: leaveRequest.destination,
+    attendance: leaveRequest.attendance,
     reason: leaveRequest.reason,
     exitTime: leaveRequest.exitTime,
     entryTime: leaveRequest.entryTime,

@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import api from '@/services/api';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import '../shared/ApprovalsPage.css';
 import './GuardPages.css';
 
@@ -16,6 +17,7 @@ interface GateLogEntry {
 }
 
 export function GateLogPage() {
+  const { error: showError } = useFeedback();
   const [logs, setLogs] = useState<GateLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -95,7 +97,7 @@ export function GateLogPage() {
                               document.body.removeChild(a);
                               URL.revokeObjectURL(url);
                             } catch {
-                              alert('Could not download PDF pass.');
+                               showError('Could not download PDF pass.');
                             }
                           }}
                         >

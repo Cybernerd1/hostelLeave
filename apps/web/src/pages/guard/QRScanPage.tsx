@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react';
 import api from '@/services/api';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import './GuardPages.css';
 
 interface LeavePassInfo {
@@ -23,18 +24,15 @@ interface LeavePassInfo {
 }
 
 export function QRScanPage() {
+  const { error: showError, success } = useFeedback();
   const [manualId, setManualId] = useState('');
   const [leaveInfo, setLeaveInfo] = useState<LeavePassInfo | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [recordMsg, setRecordMsg] = useState<string | null>(null);
 
   const lookupLeave = useCallback(async (id: string) => {
     if (!id.trim()) return;
     setLoading(true);
-    setError(null);
     setLeaveInfo(null);
-    setRecordMsg(null);
     try {
       // The human-readable leave ID (LV-...) only works on the public lookup route.
       // GET /leaves/:id expects a MongoDB _id and fails with 400 for LV-... IDs.
@@ -62,11 +60,11 @@ export function QRScanPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const status = (err as any)?.response?.status;
       if (status === 404) {
-        setError('Leave pass not found. Check the Leave ID.');
+        showError('Leave pass not found. Check the Leave ID.');
       } else if (status === 429) {
-        setError('Too many requests. Please wait a moment and try again.');
+        showError('Too many requests. Please wait a moment and try again.');
       } else {
-        setError('Could not verify the pass right now. Please try again.');
+        showError('Could not verify the pass right now. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -79,23 +77,21 @@ export function QRScanPage() {
 
   const handleRecordExit = async () => {
     if (!leaveInfo) return;
-    setRecordMsg(null);
     try {
       await api.post(`/guard/scan`, { leaveId: leaveInfo._id, action: 'exit' });
-      setRecordMsg('✅ Exit recorded successfully.');
+      success('Exit recorded successfully.');
     } catch {
-      setRecordMsg('❌ Could not record exit at this time.');
+      showError('Could not record exit at this time.');
     }
   };
 
   const handleRecordReturn = async () => {
     if (!leaveInfo) return;
-    setRecordMsg(null);
     try {
       await api.post(`/guard/scan`, { leaveId: leaveInfo._id, action: 'return' });
-      setRecordMsg('✅ Return recorded successfully.');
+      success('Return recorded successfully.');
     } catch {
-      setRecordMsg('❌ Could not record return at this time.');
+      showError('Could not record return at this time.');
     }
   };
 
@@ -127,7 +123,6 @@ export function QRScanPage() {
               {loading ? 'Checking…' : 'Verify'}
             </button>
           </div>
-          {error && <div className="guard-error">{error}</div>}
         </Card>
 
         {/* Result */}
@@ -169,7 +164,7 @@ export function QRScanPage() {
                       document.body.removeChild(a);
                       URL.revokeObjectURL(url);
                     } catch {
-                      setRecordMsg('❌ Could not download PDF pass.');
+                       showError('Could not download PDF pass.');
                     }
                   }}
                 >
@@ -177,7 +172,6 @@ export function QRScanPage() {
                 </button>
               </div>
             )}
-            {recordMsg && <p className="guard-msg">{recordMsg}</p>}
           </Card>
         )}
       </div>

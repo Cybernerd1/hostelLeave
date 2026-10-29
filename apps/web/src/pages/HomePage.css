@@ -260,9 +260,15 @@
   padding: 0.75rem 0;
   font-size: 1rem;
   font-weight: 500;
+  /* Mobile menu bg is near-white paper — keep ink color */
   color: var(--hp-ink);
   text-decoration: none;
   border-bottom: 1px solid var(--hp-line-soft);
+}
+
+/* Override global <a> link color inside mobile menu */
+.hp-mobile-menu a:hover {
+  color: var(--hp-ink);
 }
 
 .hp-mobile-menu .hp-btn {
@@ -886,7 +892,8 @@
 .hp-closing__note {
   margin: 1.75rem auto 0;
   font-size: 0.875rem;
-  color: rgba(250, 247, 241, 0.55);
+  /* Increased from 0.55 — was too faint to read on dark background */
+  color: rgba(250, 247, 241, 0.78);
   max-width: 26rem;
 }
 
@@ -918,7 +925,7 @@
 
 .hp-footer__brand span {
   font-size: 0.75rem;
-  color: rgba(250, 247, 241, 0.55);
+  color: rgba(250, 247, 241, 0.78);
 }
 
 .hp-footer__links {

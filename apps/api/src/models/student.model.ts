@@ -13,6 +13,7 @@ export interface IStudentDocument extends Document {
   _id: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   rollNumber: string;
+  studentNumber?: string;
   name: string;
   phone: string;
   gender: Gender;
@@ -23,8 +24,8 @@ export interface IStudentDocument extends Document {
   pincode: string;
   departmentId: mongoose.Types.ObjectId;
   courseId: mongoose.Types.ObjectId;
-  hostelId: mongoose.Types.ObjectId;
-  roomId: mongoose.Types.ObjectId;
+  hostelId?: mongoose.Types.ObjectId;
+  roomId?: mongoose.Types.ObjectId;
   parentId: mongoose.Types.ObjectId;
   profileImage?: string;
   year: number;
@@ -32,6 +33,24 @@ export interface IStudentDocument extends Document {
   admissionYear: number;
   bloodGroup?: string;
   emergencyContact?: string;
+  admissionNumber?: string;
+  academicSession?: string;
+  fatherName?: string;
+  fatherEmail?: string;
+  fatherPhone?: string;
+  motherName?: string;
+  motherEmail?: string;
+  motherPhone?: string;
+  guardianAddressLine1?: string;
+  guardianAddressLine2?: string;
+  guardianCity?: string;
+  guardianState?: string;
+  guardianPincode?: string;
+  guardianCountry?: string;
+  applicationStatus: 'pending' | 'approved' | 'rejected' | 'allocated';
+  allocationStatus: 'none' | 'active' | 'transferred' | 'ended';
+  allocatedAt?: Date;
+  allocatedBy?: mongoose.Types.ObjectId;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -50,6 +69,11 @@ const studentSchema = new Schema<IStudentDocument>(
       type: String,
       required: [true, 'Roll number is required'],
       unique: true,
+      trim: true,
+      index: true,
+    },
+    studentNumber: {
+      type: String,
       trim: true,
       index: true,
     },
@@ -94,13 +118,11 @@ const studentSchema = new Schema<IStudentDocument>(
     hostelId: {
       type: Schema.Types.ObjectId,
       ref: 'Hostel',
-      required: true,
       index: true,
     },
     roomId: {
       type: Schema.Types.ObjectId,
       ref: 'Room',
-      required: true,
     },
     parentId: {
       type: Schema.Types.ObjectId,
@@ -125,6 +147,34 @@ const studentSchema = new Schema<IStudentDocument>(
     },
     bloodGroup: { type: String, trim: true },
     emergencyContact: { type: String, trim: true },
+    admissionNumber: { type: String, trim: true, maxlength: 50 },
+    academicSession: { type: String, trim: true, maxlength: 20 },
+    fatherName: { type: String, trim: true, maxlength: 100 },
+    fatherEmail: { type: String, lowercase: true, trim: true },
+    fatherPhone: { type: String, trim: true },
+    motherName: { type: String, trim: true, maxlength: 100 },
+    motherEmail: { type: String, lowercase: true, trim: true },
+    motherPhone: { type: String, trim: true },
+    guardianAddressLine1: { type: String, trim: true, maxlength: 150 },
+    guardianAddressLine2: { type: String, trim: true, maxlength: 150 },
+    guardianCity: { type: String, trim: true, maxlength: 100 },
+    guardianState: { type: String, trim: true, maxlength: 100 },
+    guardianPincode: { type: String, trim: true, maxlength: 20 },
+    guardianCountry: { type: String, trim: true, maxlength: 100 },
+    applicationStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected', 'allocated'],
+      default: 'pending',
+      index: true,
+    },
+    allocationStatus: {
+      type: String,
+      enum: ['none', 'active', 'transferred', 'ended'],
+      default: 'none',
+      index: true,
+    },
+    allocatedAt: { type: Date },
+    allocatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     isActive: {
       type: Boolean,
       default: true,

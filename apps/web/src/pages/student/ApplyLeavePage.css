@@ -137,6 +137,11 @@
   align-items: start;
 }
 
+.apply-leave__attendance-field { max-width: 280px; }
+.apply-leave__attendance-input-wrap { position: relative; }
+.apply-leave__attendance-input-wrap .apply-leave__input { padding-right: 2rem; }
+.apply-leave__attendance-input-wrap > span { position: absolute; top: 10px; right: 12px; color: var(--text-tertiary); font-weight: var(--font-weight-semibold); }
+
 .apply-leave__days-badge {
   display: flex;
   align-items: center;

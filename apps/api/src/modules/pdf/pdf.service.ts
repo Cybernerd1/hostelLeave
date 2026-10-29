@@ -216,8 +216,8 @@ export class PdfService {
     // Row 2: Course + Year
     const courseName = s.courseId?.name ? `${s.courseId.name} (${s.courseId.code})` : '—';
     const deptName   = s.departmentId?.name || '—';
-    labelVal('2.  Course / Branch', `${courseName} — ${deptName}`, 0, y, CONTENT_W / 2 - 4);
-    labelVal('    Year', s.year ? `Year ${s.year}, Sem ${s.semester}` : '—', CONTENT_W / 2 + 4, y - LINE_H - 4, CONTENT_W / 2 - 4);
+    labelVal('2.  Course / Branch', `${courseName} / ${deptName}`, 0, y, CONTENT_W, 130);
+    labelVal('    Year', s.year ? `Year ${s.year}, Sem ${s.semester}` : '—', 0, y, CONTENT_W);
 
     // Row 3: Hostel + Room
     labelVal('3.  Hostel Name', s.hostelId?.name || '—', 0, y, CONTENT_W / 2 - 4);
@@ -236,6 +236,9 @@ export class PdfService {
     labelVal('    To Date', formatDate(leaveRequest.toDate), colW3 * 2 + 2, y - LINE_H - 4, colW3 - 2, label3);
 
     labelVal('    Leave Type', leaveTypeLabel, 0, y, CONTENT_W);
+    if (leaveRequest.attendance !== undefined && leaveRequest.attendance !== null) {
+      labelVal('    Attendance', `${leaveRequest.attendance}%`, 0, y, CONTENT_W);
+    }
 
     /* ─── SECTION 5: REASON ───────────────────────────────────── */
     hLine(y, 1);

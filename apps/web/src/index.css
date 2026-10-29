@@ -4,6 +4,11 @@
 
 /* ─── CSS Custom Properties ─────────────────────────────────────── */
 :root {
+  color-scheme: light;
+  /* Force light color scheme — prevents browser dark-mode from
+     inverting the carefully designed paper-and-ink palette. */
+  color-scheme: light;
+
   /* Primary — Institutional Ink (AKGEC portal action color).
      Deep charcoal pairs with the AKGEC yellow accent used sparingly
      for markers, selection and active states (see --color-accent-*). */
@@ -165,6 +170,7 @@
 
 html {
   font-size: 16px;
+  min-height: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -177,8 +183,11 @@ body {
   line-height: var(--line-height-normal);
   color: var(--text-primary);
   background-color: var(--surface-secondary);
-  min-height: 100vh;
+  min-height: 100%;
+  overflow-x: hidden;
 }
+
+#root { min-height: 100dvh; }
 
 img,
 svg {

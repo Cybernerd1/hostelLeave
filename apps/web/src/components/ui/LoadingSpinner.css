@@ -4,13 +4,20 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-3);
+  /* Ensure the container itself never rotates */
+  transform: none !important;
+  animation: none !important;
 }
 
 .spinner__circle {
+  flex-shrink: 0;
   border-radius: 50%;
   border: 3px solid var(--color-neutral-200);
   border-top-color: var(--color-primary-600);
+  /* Isolate animation to only this element */
   animation: spin 0.7s linear infinite;
+  transform-origin: center center;
+  will-change: transform;
 }
 
 .spinner--sm .spinner__circle {

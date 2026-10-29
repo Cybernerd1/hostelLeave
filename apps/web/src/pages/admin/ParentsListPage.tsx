@@ -6,9 +6,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminApi, type ParentRecord, type StudentRecord } from '@/services/admin.service';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import '../shared/ApprovalsPage.css';
 
 export function ParentsListPage() {
+  const { error: showError, success } = useFeedback();
   const [parents, setParents] = useState<ParentRecord[]>([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -20,7 +22,6 @@ export function ParentsListPage() {
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [assigning, setAssigning] = useState(false);
-  const [assignMsg, setAssignMsg] = useState<string | null>(null);
 
   const fetchParents = useCallback(async () => {
     setLoading(true);
@@ -40,7 +41,6 @@ export function ParentsListPage() {
   const openAssign = async (parentId: string, parentName: string) => {
     setAssignModal({ parentId, parentName });
     setSelectedStudentId('');
-    setAssignMsg(null);
     const res = await adminApi.getStudents({ limit: 100 });
     setStudents(res.data.filter((s) => !s.parentId));
   };
@@ -48,14 +48,13 @@ export function ParentsListPage() {
   const handleAssign = async () => {
     if (!assignModal || !selectedStudentId) return;
     setAssigning(true);
-    setAssignMsg(null);
     try {
       await adminApi.assignParentToStudent(selectedStudentId, assignModal.parentId);
-      setAssignMsg('✅ Parent assigned to student successfully!');
+      success('Parent assigned to student successfully.');
       await fetchParents();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setAssignMsg('❌ ' + (e.response?.data?.message || 'Failed.'));
+      showError(e.response?.data?.message || 'Failed to assign parent.');
     } finally {
       setAssigning(false);
     }
@@ -149,14 +148,9 @@ export function ParentsListPage() {
                 <option key={s._id} value={s._id}>{s.name} ({s.rollNumber})</option>
               ))}
             </select>
-            {students.length === 0 && !assignMsg && (
+            {students.length === 0 && (
               <p style={{ fontSize: '0.8125rem', color: 'var(--color-neutral-500)', marginBottom: '0.75rem' }}>
                 All students already have parents assigned.
-              </p>
-            )}
-            {assignMsg && (
-              <p style={{ fontSize: '0.875rem', marginBottom: '0.75rem', color: assignMsg.startsWith('✅') ? '#15803d' : '#dc2626' }}>
-                {assignMsg}
               </p>
             )}
             <div className="modal__actions">
@@ -171,3 +165,6 @@ export function ParentsListPage() {
     </div>
   );
 }
+
+
+

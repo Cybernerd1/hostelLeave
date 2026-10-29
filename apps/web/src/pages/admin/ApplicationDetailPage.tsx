@@ -1,0 +1,270 @@
+/**
+ * Admin: Application Detail Page
+ * View application details and approve/reject.
+ */
+
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { adminApi, type ApplicationRecord } from '@/services/admin.service';
+import type { RoomRecord } from '@/services/admin.service';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
+import '../shared/ApprovalsPage.css';
+import './AdminPages.css';
+
+const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  pending: { label: 'Pending', color: 'pending' },
+  under_review: { label: 'Under Review', color: 'pending' },
+  approved: { label: 'Approved', color: 'approved' },
+  rejected: { label: 'Rejected', color: 'rejected' },
+  allocated: { label: 'Allocated', color: 'success' },
+};
+
+export function ApplicationDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { error: showError, success } = useFeedback();
+  const [application, setApplication] = useState<ApplicationRecord | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [availableHostels, setAvailableHostels] = useState<Array<{ _id: string; name: string; type: string; roomsAvailable: number; seatsRemaining: number }>>([]);
+  const [availableRooms, setAvailableRooms] = useState<RoomRecord[]>([]);
+  const [selectedHostelId, setSelectedHostelId] = useState('');
+  const [selectedRoomId, setSelectedRoomId] = useState('');
+  const [allocationReason, setAllocationReason] = useState('Approved student hostel allocation');
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    adminApi.getApplicationById(id)
+      .then(setApplication)
+      .catch(() => { setApplication(null); showError('Unable to load application details.'); })
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  const canAllocate = (user?.role === 'admin' || user?.role === 'chief_warden' || user?.role === 'warden') && application?.status === 'approved';
+
+  useEffect(() => {
+    if (!canAllocate) return;
+    setAvailabilityLoading(true);
+
+    adminApi.getAvailableHostels()
+      .then(setAvailableHostels)
+      .catch(() => { showError('Unable to load hostel availability.'); })
+      .finally(() => setAvailabilityLoading(false));
+  }, [canAllocate]);
+
+  const handleHostelChange = async (hostelId: string) => {
+    setSelectedHostelId(hostelId);
+    setSelectedRoomId('');
+    setAvailableRooms([]);
+    if (!hostelId) return;
+    setAvailabilityLoading(true);
+    try { setAvailableRooms(await adminApi.getAvailableRooms(hostelId)); } catch { showError('Unable to load rooms for the selected hostel.'); } finally { setAvailabilityLoading(false); }
+  };
+
+  const handleAllocation = async () => {
+    if (!id || !selectedHostelId || !selectedRoomId) return;
+    setSubmitting(true);
+    try {
+      await adminApi.allocateApplication(id, { hostelId: selectedHostelId, roomId: selectedRoomId, reason: allocationReason.trim() || 'Hostel allocation' });
+      success('Hostel and room allocated successfully.');
+      setApplication(await adminApi.getApplicationById(id));
+      setSelectedHostelId('');
+      setSelectedRoomId('');
+      setAvailableRooms([]);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showError(e.response?.data?.message || 'Room is no longer available. Refresh and try again.');
+      if (selectedHostelId) handleHostelChange(selectedHostelId);
+    } finally { setSubmitting(false); }
+  };
+
+  const status = application ? (STATUS_CONFIG[application.status] || { label: application.status, color: 'neutral' }) : null;
+
+  const handleAction = async (action: 'approve' | 'reject') => {
+    if (!id) return;
+    setSubmitting(true);
+
+    let rejectionReason = '';
+    let reviewNotes = '';
+
+    if (action === 'reject') {
+      rejectionReason = window.prompt('Please enter a reason for rejection:');
+      if (rejectionReason === null || rejectionReason.trim() === '') {
+        setSubmitting(false);
+        showError('Rejection reason is required.');
+        return;
+      }
+      rejectionReason = rejectionReason.trim();
+    } else {
+      reviewNotes = window.prompt('Enter review notes (optional):') || '';
+    }
+
+    try {
+      await adminApi.approveRejectApplication(id, {
+        action,
+        reviewNotes,
+        rejectionReason: action === 'reject' ? rejectionReason : undefined,
+      });
+      success(`Application ${action}d successfully.`);
+      setTimeout(() => navigate('/admin/applications'), 1500);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showError(e.response?.data?.message || 'Failed to update application.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <div className="table-empty"><div className="spinner" /></div>;
+  if (!application) return <div className="table-empty"><p>Application not found.</p></div>;
+
+  const canAct = application.status === 'pending' || application.status === 'under_review';
+
+  return (
+    <div className="approvals-page animate-fade-in-up">
+      <div className="approvals-page__header">
+        <button className="btn-action btn-action--view" onClick={() => navigate('/admin/applications')} style={{ marginRight: 8 }}>
+          ← Back
+        </button>
+        <div style={{ flex: 1 }}>
+          <h1 className="approvals-page__title">Application Details</h1>
+          <p className="approvals-page__subtitle">{application.applicationNumber}</p>
+        </div>
+      </div>
+
+
+      <div className="detail-grid">
+        {/* Application Info */}
+        <Card variant="default" padding="lg">
+          <div className="detail-section">
+            <p className="detail-section__title">Application Information</p>
+            <div className="detail-rows">
+              <div className="detail-row"><span className="detail-label">Application Number</span><span className="detail-value">{application.applicationNumber}</span></div>
+              <div className="detail-row"><span className="detail-label">Status</span><span className={`status-badge status-badge--${status?.color}`}>{status?.label}</span></div>
+              <div className="detail-row"><span className="detail-label">Source</span><span className="detail-value">{application.source}</span></div>
+              <div className="detail-row"><span className="detail-label">Submitted</span><span className="detail-value">{new Date(application.createdAt).toLocaleDateString()}</span></div>
+              {application.reviewedAt && <div className="detail-row"><span className="detail-label">Reviewed At</span><span className="detail-value">{new Date(application.reviewedAt).toLocaleDateString()}</span></div>}
+              {application.reviewedBy && <div className="detail-row"><span className="detail-label">Reviewed By</span><span className="detail-value">{application.reviewedBy.name}</span></div>}
+              {application.reviewNotes && <div className="detail-row"><span className="detail-label">Review Notes</span><span className="detail-value">{application.reviewNotes}</span></div>}
+              {application.rejectionReason && <div className="detail-row"><span className="detail-label">Rejection Reason</span><span className="detail-value" style={{ color: '#dc2626' }}>{application.rejectionReason}</span></div>}
+            </div>
+          </div>
+        </Card>
+
+        {/* Student Details */}
+        <Card variant="default" padding="lg">
+          <div className="detail-section">
+            <p className="detail-section__title">Personal Details</p>
+            <div className="detail-rows">
+              <div className="detail-row"><span className="detail-label">Full Name</span><span className="detail-value">{application.fullName}</span></div>
+              <div className="detail-row"><span className="detail-label">Student Number</span><span className="detail-value">{application.studentNumber}</span></div>
+              <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value">{application.email}</span></div>
+              <div className="detail-row"><span className="detail-label">Phone</span><span className="detail-value">{application.phoneNumber}</span></div>
+              <div className="detail-row"><span className="detail-label">Gender</span><span className="detail-value">{application.gender}</span></div>
+              <div className="detail-row"><span className="detail-label">Blood Group</span><span className="detail-value">{application.bloodGroup || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">City</span><span className="detail-value">{application.city}</span></div>
+              <div className="detail-row"><span className="detail-label">Residential Address</span><span className="detail-value">{application.residentialAddress}</span></div>
+            </div>
+          </div>
+
+          <div className="detail-section">
+            <p className="detail-section__title">Academic Details</p>
+            <div className="detail-rows">
+              <div className="detail-row"><span className="detail-label">Department</span><span className="detail-value">{(application.departmentId as unknown as { name: string })?.name || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Course</span><span className="detail-value">{(application.courseId as unknown as { name: string })?.name || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Year of Study</span><span className="detail-value">{application.yearOfStudy}</span></div>
+              <div className="detail-row"><span className="detail-label">Semester</span><span className="detail-value">{application.semester}</span></div>
+              <div className="detail-row"><span className="detail-label">Admission Year</span><span className="detail-value">{application.admissionYear}</span></div>
+              <div className="detail-row"><span className="detail-label">Academic Session</span><span className="detail-value">{application.academicSession || '—'}</span></div>
+            </div>
+          </div>
+
+          <div className="detail-section">
+            <p className="detail-section__title">Father's Details</p>
+            <div className="detail-rows">
+              <div className="detail-row"><span className="detail-label">Name</span><span className="detail-value">{application.fatherName || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value">{application.fatherEmail || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Phone</span><span className="detail-value">{application.fatherPhone || '—'}</span></div>
+            </div>
+          </div>
+
+          <div className="detail-section">
+            <p className="detail-section__title">Mother's Details</p>
+            <div className="detail-rows">
+              <div className="detail-row"><span className="detail-label">Name</span><span className="detail-value">{application.motherName || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value">{application.motherEmail || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Phone</span><span className="detail-value">{application.motherPhone || '—'}</span></div>
+            </div>
+          </div>
+
+          <div className="detail-section">
+            <p className="detail-section__title">Guardian Address</p>
+            <div className="detail-rows">
+              <div className="detail-row"><span className="detail-label">Address Line 1</span><span className="detail-value">{application.guardianAddressLine1 || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Address Line 2</span><span className="detail-value">{application.guardianAddressLine2 || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">City</span><span className="detail-value">{application.guardianCity || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">State</span><span className="detail-value">{application.guardianState || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">PIN Code</span><span className="detail-value">{application.guardianPincode || '—'}</span></div>
+              <div className="detail-row"><span className="detail-label">Country</span><span className="detail-value">{application.guardianCountry || '—'}</span></div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Allocation */}
+        {application.hostelId || application.roomId ? (
+          <Card variant="default" padding="lg">
+            <div className="detail-section">
+              <p className="detail-section__title">Hostel & Room Allocation</p>
+              <div className="detail-rows">
+                <div className="detail-row"><span className="detail-label">Hostel</span><span className="detail-value">{(application.hostelId as unknown as { name: string })?.name || '—'}</span></div>
+                <div className="detail-row"><span className="detail-label">Room</span><span className="detail-value">{(application.roomId as unknown as { roomNumber: string })?.roomNumber || '—'}</span></div>
+                {application.allocatedAt && <div className="detail-row"><span className="detail-label">Allocated At</span><span className="detail-value">{new Date(application.allocatedAt).toLocaleDateString()}</span></div>}
+                {application.allocatedBy && <div className="detail-row"><span className="detail-label">Allocated By</span><span className="detail-value">{application.allocatedBy.name}</span></div>}
+              </div>
+            </div>
+          </Card>
+        ) : null}
+
+        {canAllocate && (
+          <Card variant="default" padding="lg">
+            <div className="detail-section">
+              <p className="detail-section__title">Allocate Hostel & Room</p>
+              <p style={{ color: 'var(--color-neutral-500)', fontSize: '0.875rem' }}>Availability is rechecked by the server when you confirm.</p>
+              <div className="filters-row">
+                <select className="filter-select" value={selectedHostelId} onChange={(e) => handleHostelChange(e.target.value)} disabled={availabilityLoading}>
+                  <option value="">{availabilityLoading ? 'Loading hostels…' : availableHostels.length ? 'Select hostel' : 'No hostels with seats'}</option>
+                  {availableHostels.map((hostel) => <option key={hostel._id} value={hostel._id}>{hostel.name} — {hostel.roomsAvailable} rooms available, {hostel.seatsRemaining} seats remaining</option>)}
+                </select>
+                <select className="filter-select" value={selectedRoomId} onChange={(e) => setSelectedRoomId(e.target.value)} disabled={!selectedHostelId || availabilityLoading}>
+                  <option value="">{selectedHostelId ? (availableRooms.length ? 'Select room' : 'No rooms with seats') : 'Select a hostel first'}</option>
+                  {availableRooms.map((room) => <option key={room._id} value={room._id}>{room.roomNumber} — {room.availableSeats} of {room.capacity} seats available</option>)}
+                </select>
+              </div>
+              <input className="filter-input" style={{ width: '100%', marginBottom: '0.75rem' }} value={allocationReason} onChange={(e) => setAllocationReason(e.target.value)} placeholder="Allocation reason" maxLength={500} />
+              <button className="btn btn--primary" onClick={handleAllocation} disabled={submitting || !selectedHostelId || !selectedRoomId || availabilityLoading}>{submitting ? 'Allocating…' : 'Confirm Allocation'}</button>
+            </div>
+          </Card>
+        )}
+      </div>
+
+      {/* Action Buttons */}
+      {canAct && (
+        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+          <button className="btn btn--primary" onClick={() => handleAction('approve')} disabled={submitting}>
+            {submitting ? 'Approving…' : 'Approve Application'}
+          </button>
+          <button className="btn btn--secondary" style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5' }} onClick={() => handleAction('reject')} disabled={submitting}>
+            {submitting ? 'Rejecting…' : 'Reject Application'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+

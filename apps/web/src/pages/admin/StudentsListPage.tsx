@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { adminApi, type StudentRecord, type ParentRecord } from '@/services/admin.service';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import '../shared/ApprovalsPage.css';
 import './AdminPages.css';
 
@@ -15,30 +16,28 @@ export function StudentsListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
+  const { error: showError, success } = useFeedback();
 
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [error, setError] = useState<string | null>(null);
 
   // Assign parent modal
   const [assignModal, setAssignModal] = useState<{ studentId: string; studentName: string } | null>(null);
   const [parents, setParents] = useState<ParentRecord[]>([]);
   const [selectedParentId, setSelectedParentId] = useState('');
   const [assigning, setAssigning] = useState(false);
-  const [assignMsg, setAssignMsg] = useState<string | null>(null);
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const res = await adminApi.getStudents({ page, limit: 15, search: search || undefined });
       setStudents(res.data);
       setPagination({ page: res.pagination.page, totalPages: res.pagination.totalPages, total: res.pagination.total });
     } catch {
-      setError('Failed to load students.');
+      showError('Failed to load students.');
     } finally {
       setLoading(false);
     }
@@ -49,7 +48,6 @@ export function StudentsListPage() {
   const openAssign = async (studentId: string, studentName: string) => {
     setAssignModal({ studentId, studentName });
     setSelectedParentId('');
-    setAssignMsg(null);
     const res = await adminApi.getParents({ limit: 100 });
     setParents(res.data);
   };
@@ -57,14 +55,13 @@ export function StudentsListPage() {
   const handleAssign = async () => {
     if (!assignModal || !selectedParentId) return;
     setAssigning(true);
-    setAssignMsg(null);
     try {
       await adminApi.assignParentToStudent(assignModal.studentId, selectedParentId);
-      setAssignMsg('✅ Parent assigned successfully!');
+      success('Parent assigned successfully.');
       await fetchStudents();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setAssignMsg('❌ ' + (e.response?.data?.message || 'Failed to assign parent.'));
+      showError(e.response?.data?.message || 'Failed to assign parent.');
     } finally {
       setAssigning(false);
     }
@@ -90,7 +87,6 @@ export function StudentsListPage() {
         <button className="btn btn--primary btn--sm" onClick={() => { setPage(1); fetchStudents(); }}>Search</button>
       </div>
 
-      {error && <div className="error-banner">{error}</div>}
 
       <Card variant="default" padding="none">
         {loading ? (
@@ -180,11 +176,6 @@ export function StudentsListPage() {
                 <option key={p._id} value={p._id}>{p.name} ({p.email})</option>
               ))}
             </select>
-            {assignMsg && (
-              <p style={{ fontSize: '0.875rem', marginBottom: '0.75rem', color: assignMsg.startsWith('✅') ? '#15803d' : '#dc2626' }}>
-                {assignMsg}
-              </p>
-            )}
             <div className="modal__actions">
               <button className="btn btn--secondary" onClick={() => setAssignModal(null)}>Close</button>
               <button className="btn btn--primary" onClick={handleAssign} disabled={!selectedParentId || assigning}>
@@ -197,3 +188,6 @@ export function StudentsListPage() {
     </div>
   );
 }
+
+
+

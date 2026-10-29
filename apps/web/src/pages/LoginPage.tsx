@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getDashboardPath, getRoleLabel } from '@/utils/roleConfig';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { useFeedback } from '@/components/ui/FeedbackProvider';
 import './LoginPage.css';
 
 // Demo credentials map
@@ -59,7 +60,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showDemoBanner, setShowDemoBanner] = useState(true);
-  const [error, setError] = useState('');
+  const { error: showError } = useFeedback();
   const [isLoading, setIsLoading] = useState(false);
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
@@ -73,7 +74,6 @@ export function LoginPage() {
       setEmail('');
     }
     setPassword('');
-    setError('');
   }, [roleParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fillDemoCredentials = () => {
@@ -95,10 +95,8 @@ export function LoginPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
-
     if (!email || !password) {
-      setError('Please enter both email and password');
+      showError('Please enter both email and password.');
       return;
     }
 
@@ -113,9 +111,9 @@ export function LoginPage() {
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosErr = err as { response?: { data?: { message?: string } } };
-        setError(axiosErr.response?.data?.message || 'Invalid credentials');
+        showError(axiosErr.response?.data?.message || 'Invalid credentials');
       } else {
-        setError('Network error. Please try again.');
+        showError('Network error. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -270,16 +268,6 @@ export function LoginPage() {
                   <button type="button" className="lp-demo__fill" onClick={fillDemoCredentials} id="fill-demo-credentials">
                     Auto-fill credentials
                   </button>
-                </div>
-              )}
-
-              {error && (
-                <div className="lp-error" role="alert">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M15 9l-6 6M9 9l6 6" />
-                  </svg>
-                  {error}
                 </div>
               )}
 
