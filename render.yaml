@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: hostel-leave-api
+    runtime: node
+    rootDir: .
+    buildCommand: npm ci --include=dev && npm run build:api
+    startCommand: npm run start -w apps/api
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
