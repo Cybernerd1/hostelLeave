@@ -37,17 +37,31 @@ EXPOSE 5000
 CMD ["node", "apps/api/dist/server.js"]
 ```
 
-### 2. Create render.yaml
+### 2. Configure Render
 
-Create `render.yaml` at root:
+The repository includes `render.yaml` at its root. If configuring the service
+manually in the Render dashboard, use the repository root as **Root Directory**
+(leave it blank) and use these commands:
+
+```text
+Build Command: npm ci --include=dev && npm run build:api
+Start Command: npm run start -w apps/api
+```
+
+`npm ci` must run from the repository root so npm installs the workspace
+dependencies. The API build also builds the two shared packages before running
+TypeScript.
+
+The equivalent Blueprint configuration is:
 
 ```yaml
 services:
   - type: web
     name: hostel-leave-api
-    env: node
-    buildCommand: "npm run build:packages && npm run build:api"
-    startCommand: "node apps/api/dist/server.js"
+    runtime: node
+    rootDir: .
+    buildCommand: npm ci --include=dev && npm run build:api
+    startCommand: npm run start -w apps/api
     envVars:
       - key: NODE_ENV
         value: production
@@ -65,13 +79,7 @@ services:
         fromSecret: smtp_user
       - key: SMTP_PASS
         fromSecret: smtp_pass
-    healthCheck:
-      path: /api/v1/health
-      port: 5000
-      timeout: 300
-      interval: 30
-    domains:
-      - api.hostelleave.com
+    healthCheckPath: /api/v1/health
 ```
 
 ### 3. Configure Database
