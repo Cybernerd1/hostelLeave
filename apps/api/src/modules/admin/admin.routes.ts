@@ -38,7 +38,7 @@ import { UserRole } from '@hostel/shared-types';
 const router = Router();
 
 const ADMIN_ROLES = [UserRole.ADMIN] as const;
-const MANAGE_STUDENT_ROLES = [UserRole.ADMIN, UserRole.HOD, UserRole.CHIEF_WARDEN] as const;
+const MANAGE_STUDENT_ROLES = [UserRole.ADMIN, UserRole.CHIEF_WARDEN] as const;
 const CHIEF_WARDEN_ROLES = [UserRole.ADMIN, UserRole.CHIEF_WARDEN] as const;
 const STAFF_ROLES = [UserRole.ADMIN, UserRole.CHIEF_WARDEN, UserRole.WARDEN] as const;
 
@@ -59,7 +59,7 @@ router.post('/students/import', authorize(...STAFF_ROLES), adminController.impor
 router.get('/students/import/template/csv', authorize(...STAFF_ROLES), adminController.downloadCsvTemplate);
 router.get('/students/import/template/excel', authorize(...STAFF_ROLES), adminController.downloadExcelTemplate);
 
-// Students (read + assign-parent also available to HOD & Chief Warden)
+// Students (read + assign-parent available to Admin and Chief Warden)
 router.post('/students', authorize(...ADMIN_ROLES), validateBody(createStudentSchema), adminController.createStudent);
 router.get('/students', authorize(...MANAGE_STUDENT_ROLES), adminController.getStudents);
 router.get('/students/allocation-candidates', authorize(...CHIEF_WARDEN_ROLES), adminController.getAllocationCandidates);

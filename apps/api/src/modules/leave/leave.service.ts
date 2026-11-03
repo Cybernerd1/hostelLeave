@@ -38,9 +38,7 @@ import type { PaginationMeta } from '@hostel/shared-types';
  */
 const SUPER_APPROVER_ROLES: UserRole[] = [
   UserRole.ADMIN,
-  UserRole.DIRECTOR,
   UserRole.CHIEF_WARDEN,
-  UserRole.HOD,
 ];
 
 /**

@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 
-import { Gender, HostelType, ParentRelation, RoomType, UserRole } from '@hostel/shared-types';
+import { Gender, HolidayType, HostelType, ParentRelation, RoomType, UserRole } from '@hostel/shared-types';
 
 // ─── Pagination / Query ─────────────────────────────────────────────────────
 
@@ -154,6 +154,34 @@ export const updateRegistrationFormSchema = z.object({
   submissionLimit: z.coerce.number().int().positive().optional(),
   requiredFields: z.array(z.string()).optional(),
 });
+
+// ─── Academic Holidays ─────────────────────────────────────────────────────
+
+const holidayDate = z.string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must use YYYY-MM-DD format')
+  .refine((value) => {
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+  }, 'Date is not valid');
+const academicHolidayBaseSchema = z.object({
+  name: z.string().min(2, 'Holiday name is required').max(200).trim(),
+  startDate: holidayDate,
+  endDate: holidayDate,
+  description: z.string().max(1000).optional(),
+  type: z.nativeEnum(HolidayType).optional(),
+  confirmOverlap: z.boolean().optional(),
+});
+
+export const createAcademicHolidaySchema = academicHolidayBaseSchema.refine((data) => data.endDate >= data.startDate, {
+  message: 'End date cannot be earlier than start date',
+  path: ['endDate'],
+});
+
+export const updateAcademicHolidaySchema = academicHolidayBaseSchema.partial().refine(
+  (data) => !data.startDate || !data.endDate || data.endDate >= data.startDate,
+  { message: 'End date cannot be earlier than start date', path: ['endDate'] },
+);
 
 // ─── Public Registration ───────────────────────────────────────────────────
 
@@ -310,8 +338,6 @@ export const createStaffSchema = z.object({
       [
         UserRole.WARDEN,
         UserRole.CHIEF_WARDEN,
-        UserRole.HOD,
-        UserRole.DIRECTOR,
         UserRole.GUARD,
       ].includes(role),
     { message: 'Invalid staff role' },
@@ -341,6 +367,8 @@ export type AllocateRoomSchemaType = z.infer<typeof allocateRoomSchema>;
 export type TransferRoomSchemaType = z.infer<typeof transferRoomSchema>;
 export type CreateRegistrationFormSchemaType = z.infer<typeof createRegistrationFormSchema>;
 export type UpdateRegistrationFormSchemaType = z.infer<typeof updateRegistrationFormSchema>;
+export type CreateAcademicHolidaySchemaType = z.infer<typeof createAcademicHolidaySchema>;
+export type UpdateAcademicHolidaySchemaType = z.infer<typeof updateAcademicHolidaySchema>;
 export type PublicRegistrationSchemaType = z.infer<typeof publicRegistrationSchema>;
 export type ApplicationFilterSchemaType = z.infer<typeof applicationFilterSchema>;
 export type CreateParentSchemaType = z.infer<typeof createParentSchema>;

@@ -245,6 +245,31 @@
   border-top: 1px solid var(--border-primary);
 }
 
+/* ─── Leave / Holiday Calendar ───────────────────────────────────── */
+.leave-detail__calendar-card { overflow: hidden; }
+.leave-detail__calendar-summary { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-5); }
+.leave-detail__calendar-summary span { background: var(--surface-secondary); border: 1px solid var(--border-secondary); border-radius: var(--radius-md); color: var(--text-secondary); font-size: var(--font-size-sm); padding: 8px 12px; }
+.leave-detail__calendar-summary strong { color: var(--text-primary); margin-right: 3px; }
+.leave-detail__calendar-legend { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-5); color: var(--text-secondary); font-size: var(--font-size-xs); }
+.leave-detail__calendar-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.leave-detail__legend-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.leave-detail__legend-swatch--holiday { background: #fecaca; border: 1px solid #ef4444; }
+.leave-detail__legend-swatch--leave { background: #bfdbfe; border: 1px solid #3b82f6; }
+.leave-detail__legend-swatch--overlap { background: #ddd6fe; border: 1px solid #8b5cf6; }
+.leave-detail__legend-swatch--regular { background: #f3f4f6; border: 1px solid #d1d5db; }
+.leave-detail__calendar-month-label { font-weight: var(--font-weight-semibold); color: var(--text-primary); text-align: center; margin-bottom: var(--space-3); }
+.leave-detail__calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(34px, 1fr)); gap: 5px; }
+.leave-detail__calendar-weekday { text-align: center; color: var(--text-tertiary); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); padding: 5px 0; }
+.leave-detail__calendar-day { min-height: 38px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); font-size: var(--font-size-sm); border: 1px solid transparent; }
+.leave-detail__calendar-day--blank { visibility: hidden; }
+.leave-detail__calendar-day--regular { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
+.leave-detail__calendar-day--holiday { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; font-weight: var(--font-weight-semibold); }
+.leave-detail__calendar-day--leave { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; font-weight: var(--font-weight-semibold); }
+.leave-detail__calendar-day--overlap { background: #ede9fe; color: #6d28d9; border-color: #a78bfa; font-weight: var(--font-weight-bold); }
+.leave-detail__calendar-note { color: var(--text-tertiary); font-size: var(--font-size-xs); margin-top: var(--space-4); }
+.leave-detail__calendar-state { padding: var(--space-4); color: var(--text-secondary); background: var(--surface-secondary); border-radius: var(--radius-md); text-align: center; }
+.leave-detail__calendar-state--error { color: var(--color-error-700); background: var(--color-error-50); }
+
 /* ─── Documents ──────────────────────────────────────────────────── */
 .leave-detail__docs {
   display: flex;

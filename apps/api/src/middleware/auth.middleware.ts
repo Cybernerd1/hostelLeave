@@ -6,7 +6,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 
-import type { UserRole } from '@hostel/shared-types';
+import { UserRole, type UserRole as UserRoleType } from '@hostel/shared-types';
 
 import { AppError } from '../utils/AppError';
 import { verifyAccessToken, extractTokenFromHeader } from '../utils/token.util';
@@ -19,7 +19,7 @@ declare global {
       user?: {
         userId: string;
         email: string;
-        role: UserRole;
+        role: UserRoleType;
       };
     }
   }
@@ -55,11 +55,15 @@ export async function authenticate(
       throw AppError.forbidden('Your account has been deactivated');
     }
 
+    if (user.role === UserRole.HOD || user.role === UserRole.DIRECTOR) {
+      throw AppError.forbidden('This role is temporarily disabled');
+    }
+
     // Attach user to request
     req.user = {
       userId: user._id.toString(),
       email: user.email,
-      role: user.role as UserRole,
+      role: user.role as UserRoleType,
     };
 
     next();
@@ -84,11 +88,11 @@ export async function optionalAuth(
       const decoded = verifyAccessToken(token);
       const user = await User.findById(decoded.userId).select('_id email role isActive').lean();
 
-      if (user && user.isActive) {
+      if (user && user.isActive && user.role !== UserRole.HOD && user.role !== UserRole.DIRECTOR) {
         req.user = {
           userId: user._id.toString(),
           email: user.email,
-          role: user.role as UserRole,
+          role: user.role as UserRoleType,
         };
       }
     }

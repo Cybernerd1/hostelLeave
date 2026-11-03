@@ -19,6 +19,7 @@ export {
   AuditAction,
   ParentRelation,
   Gender,
+  HolidayType,
 } from './enums';
 
 // Model types

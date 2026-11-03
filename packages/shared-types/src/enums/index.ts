@@ -118,3 +118,12 @@ export enum Gender {
   FEMALE = 'female',
   OTHER = 'other',
 }
+
+/** Academic holiday classification */
+export enum HolidayType {
+  NATIONAL = 'national',
+  FESTIVAL = 'festival',
+  INSTITUTIONAL = 'institutional',
+  VACATION = 'vacation',
+  OTHER = 'other',
+}

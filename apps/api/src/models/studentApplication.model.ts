@@ -106,7 +106,6 @@ const studentApplicationSchema = new Schema<IStudentApplicationDocument>(
       required: [true, 'Student number is required'],
       unique: true,
       trim: true,
-      index: true,
     },
     admissionNumber: { type: String, trim: true, maxlength: 50 },
     dateOfBirth: { type: Date },
@@ -126,7 +125,6 @@ const studentApplicationSchema = new Schema<IStudentApplicationDocument>(
       required: [true, 'Email is required'],
       lowercase: true,
       trim: true,
-      index: true,
     },
     city: { type: String, required: true, trim: true, maxlength: 100 },
     residentialAddress: {
@@ -239,7 +237,6 @@ const studentApplicationSchema = new Schema<IStudentApplicationDocument>(
 // Compound indexes
 studentApplicationSchema.index({ status: 1, createdAt: -1 });
 studentApplicationSchema.index({ email: 1 });
-studentApplicationSchema.index({ studentNumber: 1 });
 studentApplicationSchema.index({ source: 1, status: 1 });
 studentApplicationSchema.index({ registrationFormId: 1 });
 

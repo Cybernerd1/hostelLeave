@@ -10,6 +10,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
 import { leaveApi, type LeaveRequest } from '@/services/leave.service';
+import { academicHolidayApi, type AcademicHoliday } from '@/services/academicHoliday.service';
 import './LeaveDetailPage.css';
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -88,6 +89,27 @@ function calcDays(from: string | Date, to: string | Date) {
   return diff + 1;
 }
 
+function dateKey(value: string | Date) {
+  const date = new Date(value);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
+function dateFromKey(key: string) {
+  return new Date(`${key}T00:00:00Z`);
+}
+
+function addDays(key: string, amount: number) {
+  const date = dateFromKey(key);
+  date.setUTCDate(date.getUTCDate() + amount);
+  return dateKey(date);
+}
+
+function expandRange(start: string, end: string) {
+  const days: string[] = [];
+  for (let current = start; current <= end; current = addDays(current, 1)) days.push(current);
+  return days;
+}
+
 // ─── Component ────────────────────────────────────────────────────
 export function LeaveDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -98,6 +120,9 @@ export function LeaveDetailPage() {
   const [leave, setLeave] = useState<LeaveRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [holidays, setHolidays] = useState<AcademicHoliday[]>([]);
+  const [holidayLoading, setHolidayLoading] = useState(false);
+  const [holidayError, setHolidayError] = useState('');
 
   // Approval action state
   const [actionLoading, setActionLoading] = useState(false);
@@ -115,9 +140,22 @@ export function LeaveDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [id]);
+  }, [id, showError]);
 
   useEffect(() => { fetchLeave(); }, [fetchLeave]);
+
+  const holidayRangeStart = leave ? dateKey(leave.fromDate) : '';
+  const holidayRangeEnd = leave ? dateKey(leave.toDate) : '';
+
+  useEffect(() => {
+    if (!holidayRangeStart || !holidayRangeEnd) return;
+    setHolidayLoading(true);
+    setHolidayError('');
+    academicHolidayApi.list({ fromDate: holidayRangeStart, toDate: holidayRangeEnd })
+      .then(setHolidays)
+      .catch(() => setHolidayError('Academic holidays could not be loaded.'))
+      .finally(() => setHolidayLoading(false));
+  }, [holidayRangeStart, holidayRangeEnd]);
 
   const handleDownloadPDF = async () => {
     if (!id || !leave) return;
@@ -193,6 +231,22 @@ export function LeaveDetailPage() {
   }
 
   const statusInfo = leave ? (STATUS_CONFIG[leave.status] ?? STATUS_CONFIG['draft']) : null;
+
+  const leaveStartKey = dateKey(leave.fromDate);
+  const leaveEndKey = dateKey(leave.toDate);
+  const requestedDays = expandRange(leaveStartKey, leaveEndKey);
+  const requestedDaySet = new Set(requestedDays);
+  const holidayDaySet = new Set(holidays.flatMap((holiday) => expandRange(holiday.startDate, holiday.endDate)));
+  const overlapDaySet = new Set(requestedDays.filter((day) => holidayDaySet.has(day)));
+  const holidayRecordsWithinRequest = holidays.filter((holiday) =>
+    expandRange(holiday.startDate, holiday.endDate).some((day) => requestedDaySet.has(day)),
+  ).length;
+  const displayStart = dateFromKey(leaveStartKey);
+  displayStart.setUTCDate(1);
+  const displayEnd = dateFromKey(leaveEndKey);
+  displayEnd.setUTCDate(new Date(Date.UTC(displayEnd.getUTCFullYear(), displayEnd.getUTCMonth() + 1, 0)).getUTCDate());
+  const calendarDays = expandRange(dateKey(displayStart), dateKey(displayEnd));
+  const leadingBlankDays = (displayStart.getUTCDay() + 6) % 7;
 
   // ── Workflow progress tracker ─────────────────────────────────────
   /** Determine the state of each workflow stage based on leave status + approvals */
@@ -503,6 +557,44 @@ export function LeaveDetailPage() {
           <div className="leave-detail__applied-on">
             Applied on {formatDateTime(leave.createdAt)}
           </div>
+        </div>
+
+        {/* ── Leave / Academic Holiday Calendar ─────────────────── */}
+        <div className="leave-detail__card leave-detail__calendar-card">
+          <h2 className="leave-detail__card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="17" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            Leave &amp; Academic Holiday Calendar
+          </h2>
+          {holidayLoading ? <div className="leave-detail__calendar-state">Loading the latest academic holidays…</div> : holidayError ? <div className="leave-detail__calendar-state leave-detail__calendar-state--error">{holidayError}</div> : (
+            <>
+              <div className="leave-detail__calendar-summary">
+                <span><strong>{requestedDays.length}</strong> requested calendar days</span>
+                <span><strong>{overlapDaySet.size}</strong> overlapping holiday dates</span>
+                <span><strong>{holidayRecordsWithinRequest}</strong> academic holidays in period</span>
+                <span><strong>{requestedDays.length - overlapDaySet.size}</strong> regular academic days</span>
+              </div>
+              <div className="leave-detail__calendar-legend" aria-label="Calendar legend">
+                <span><i className="leave-detail__legend-swatch leave-detail__legend-swatch--holiday" /> Academic holiday</span>
+                <span><i className="leave-detail__legend-swatch leave-detail__legend-swatch--leave" /> Requested leave</span>
+                <span><i className="leave-detail__legend-swatch leave-detail__legend-swatch--overlap" /> Holiday + leave overlap</span>
+                <span><i className="leave-detail__legend-swatch leave-detail__legend-swatch--regular" /> Regular academic day</span>
+              </div>
+              <div className="leave-detail__calendar-month-label">{displayStart.toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' })}{displayStart.getUTCMonth() !== displayEnd.getUTCMonth() || displayStart.getUTCFullYear() !== displayEnd.getUTCFullYear() ? ` – ${displayEnd.toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' })}` : ''}</div>
+              <div className="leave-detail__calendar-grid" role="grid" aria-label="Leave date calendar">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <span className="leave-detail__calendar-weekday" key={day}>{day}</span>)}
+                {Array.from({ length: leadingBlankDays }, (_, index) => <span className="leave-detail__calendar-day leave-detail__calendar-day--blank" key={`blank-${index}`} />)}
+                {calendarDays.map((day) => {
+                  const isHoliday = holidayDaySet.has(day);
+                  const isLeave = requestedDaySet.has(day);
+                  const className = isHoliday && isLeave ? 'leave-detail__calendar-day--overlap' : isHoliday ? 'leave-detail__calendar-day--holiday' : isLeave ? 'leave-detail__calendar-day--leave' : 'leave-detail__calendar-day--regular';
+                  return <span className={`leave-detail__calendar-day ${className}`} key={day} title={isHoliday && isLeave ? 'Academic holiday and requested leave' : isHoliday ? 'Academic holiday' : isLeave ? 'Requested leave' : 'Regular academic day'}>{dateFromKey(day).getUTCDate()}</span>;
+                })}
+              </div>
+              <p className="leave-detail__calendar-note">Holiday overlap is informational only. The requested leave dates and approval workflow remain unchanged.</p>
+            </>
+          )}
         </div>
 
         {/* ── Supporting Documents ──────────────────────────────── */}

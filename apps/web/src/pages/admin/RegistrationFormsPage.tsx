@@ -14,7 +14,7 @@ import './AdminPages.css';
 export function RegistrationFormsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const isAdminOrChief = user?.role === 'admin' || user?.role === 'chief_warden';
+  const canManageForms = ['admin', 'warden', 'chief_warden'].includes(user?.role || '');
   const { error: showError, success } = useFeedback();
 
   const [forms, setForms] = useState<RegistrationFormRecord[]>([]);
@@ -51,10 +51,10 @@ export function RegistrationFormsPage() {
     }
   };
 
-  if (!isAdminOrChief) {
+  if (!canManageForms) {
     return (
       <div className="approvals-page animate-fade-in-up">
-        <div className="table-empty"><p>Access denied. Admin or Chief Warden role required.</p></div>
+         <div className="table-empty"><p>Access denied. Admin, Warden, or Chief Warden role required.</p></div>
       </div>
     );
   }
@@ -150,6 +150,5 @@ export function RegistrationFormsPage() {
     </div>
   );
 }
-
 
 
