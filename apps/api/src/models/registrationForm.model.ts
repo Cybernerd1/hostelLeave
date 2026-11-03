@@ -43,7 +43,6 @@ const registrationFormSchema = new Schema<IRegistrationFormDocument>(
       required: true,
       unique: true,
       trim: true,
-      index: true,
     },
     academicSession: { type: String, trim: true, maxlength: 20 },
     isActive: {
@@ -89,7 +88,6 @@ const registrationFormSchema = new Schema<IRegistrationFormDocument>(
 );
 
 // Indexes
-registrationFormSchema.index({ token: 1 }, { unique: true });
 registrationFormSchema.index({ isActive: 1, expiresAt: 1 });
 registrationFormSchema.index({ createdBy: 1 });
 

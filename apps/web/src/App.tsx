@@ -29,7 +29,7 @@ import { WardenDashboard } from '@/pages/warden/WardenDashboard';
 import { ChiefWardenManagePage } from '@/pages/warden/ChiefWardenManagePage';
 import { GuardDashboard } from '@/pages/guard/GuardDashboard';
 import { AdminDashboard } from '@/pages/admin/AdminDashboard';
-import { DirectorDashboard } from '@/pages/warden/DirectorDashboard';
+import { AcademicHolidaysPage } from '@/pages/academic/AcademicHolidaysPage';
 
 // Student pages
 import { MyLeavesPage } from '@/pages/student/MyLeavesPage';
@@ -92,6 +92,7 @@ export default function App() {
               <Route path="/student/leaves" element={<MyLeavesPage />} />
               <Route path="/student/leaves/new" element={<ApplyLeavePage />} />
               <Route path="/student/leaves/:id" element={<LeaveDetailPage />} />
+              <Route path="/student/holidays" element={<AcademicHolidaysPage />} />
               <Route path="/student/notifications" element={<NotificationsPage />} />
               <Route path="/student/profile" element={<ProfilePage />} />
             </Route>
@@ -103,6 +104,7 @@ export default function App() {
               <Route path="/parent/dashboard" element={<ParentDashboard />} />
               <Route path="/parent/approvals" element={<PendingApprovalsPage />} />
               <Route path="/parent/leaves/:id" element={<LeaveDetailPage />} />
+              <Route path="/parent/holidays" element={<AcademicHolidaysPage />} />
               <Route path="/parent/notifications" element={<NotificationsPage />} />
               <Route path="/parent/profile" element={<ProfilePage />} />
             </Route>
@@ -115,6 +117,7 @@ export default function App() {
               <Route path="/warden/approvals" element={<PendingApprovalsPage />} />
               <Route path="/warden/leaves" element={<AllLeavesPage />} />
               <Route path="/warden/leaves/:id" element={<LeaveDetailPage />} />
+              <Route path="/warden/holidays" element={<AcademicHolidaysPage />} />
               <Route path="/warden/reports" element={<ReportsPage />} />
               <Route path="/warden/notifications" element={<NotificationsPage />} />
               <Route path="/warden/profile" element={<ProfilePage />} />
@@ -130,6 +133,7 @@ export default function App() {
               <Route path="/chief-warden/leaves/:id" element={<LeaveDetailPage />} />
               <Route path="/chief-warden/students" element={<StudentsListPage />} />
               <Route path="/chief-warden/manage" element={<ChiefWardenManagePage />} />
+              <Route path="/chief-warden/holidays" element={<AcademicHolidaysPage />} />
               <Route path="/chief-warden/reports" element={<ReportsPage />} />
               <Route path="/chief-warden/notifications" element={<NotificationsPage />} />
               <Route path="/chief-warden/profile" element={<ProfilePage />} />
@@ -142,7 +146,8 @@ export default function App() {
               <Route path="/admin/applications" element={<ApplicationsListPage />} />
               <Route path="/admin/applications/:id" element={<ApplicationDetailPage />} />
               <Route path="/admin/registration-forms" element={<RegistrationFormsPage />} />
-                <Route path="/admin/registration-forms/new" element={<CreateRegistrationFormPage />} />
+               <Route path="/admin/registration-forms/new" element={<CreateRegistrationFormPage />} />
+               <Route path="/admin/holidays" element={<AcademicHolidaysPage />} />
               </Route>
             </Route>
 
@@ -155,36 +160,6 @@ export default function App() {
              </Route>
             </Route>
 
-           {/* ─── HOD Routes ──────────────────────────────────────────── */}
-          <Route element={<ProtectedRoute allowedRoles={[UserRole.HOD]} />}>
-            <Route element={<DashboardLayout />}>
-              <Route path="/hod/dashboard" element={<WardenDashboard />} />
-              <Route path="/hod/approvals" element={<PendingApprovalsPage />} />
-              <Route path="/hod/leaves" element={<AllLeavesPage />} />
-              <Route path="/hod/leaves/:id" element={<LeaveDetailPage />} />
-              <Route path="/hod/students" element={<StudentsListPage />} />
-              <Route path="/hod/reports" element={<ReportsPage />} />
-              <Route path="/hod/notifications" element={<NotificationsPage />} />
-              <Route path="/hod/profile" element={<ProfilePage />} />
-            </Route>
-          </Route>
-
-
-          {/* ─── Director Routes ───────────────────────────────────── */}
-          <Route
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.DIRECTOR]} />
-            }
-          >
-            <Route element={<DashboardLayout />}>
-              <Route path="/director/dashboard" element={<DirectorDashboard />} />
-              <Route path="/director/leaves" element={<AllLeavesPage />} />
-              <Route path="/director/leaves/:id" element={<LeaveDetailPage />} />
-              <Route path="/director/reports" element={<ReportsPage />} />
-              <Route path="/director/notifications" element={<NotificationsPage />} />
-              <Route path="/director/profile" element={<ProfilePage />} />
-            </Route>
-          </Route>
           {/* ─── Guard Routes ────────────────────────────────────────── */}
           <Route element={<ProtectedRoute allowedRoles={[UserRole.GUARD]} />}>
             <Route element={<DashboardLayout />}>

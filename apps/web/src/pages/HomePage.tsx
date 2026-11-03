@@ -70,25 +70,6 @@ const ROLES: RoleEntry[] = [
     ],
   },
   {
-    id: 'hod',
-    label: 'HOD',
-    summary: 'Departmental oversight in the approval chain.',
-    points: [
-      'Approve department-level leaves',
-      'Look up students in the department',
-      'Read departmental leave reports',
-    ],
-  },
-  {
-    id: 'director',
-    label: 'Director',
-    summary: 'Institute-wide visibility.',
-    points: [
-      'Review all leave applications',
-      'Read reports across the institute',
-    ],
-  },
-  {
     id: 'guard',
     label: 'Security Guard',
     summary: 'The last checkpoint — where the pass meets the gate.',
@@ -126,7 +107,7 @@ const STEPS = [
   {
     n: '03',
     title: 'The institution follows',
-    body: 'Warden, chief warden, HOD and the other approvers configured for the request review it in order — each decision recorded.',
+    body: 'Warden and chief warden review the request in order — each decision is recorded for a clear, accountable workflow.',
   },
   {
     n: '04',
@@ -485,7 +466,7 @@ function Preview() {
             </li>
             <li>
               <span className="hp-preview__dot" aria-hidden="true" />
-              <div><strong>Chief warden / HOD</strong><span>Next in the chain</span></div>
+              <div><strong>Chief warden</strong><span>Next in the chain</span></div>
             </li>
             <li>
               <span className="hp-preview__dot hp-preview__dot--qr" aria-hidden="true" />

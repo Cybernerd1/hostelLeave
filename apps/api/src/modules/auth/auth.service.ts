@@ -6,7 +6,7 @@
  */
 
 
-import type { UserRole } from '@hostel/shared-types';
+import { UserRole, type UserRole as UserRoleType } from '@hostel/shared-types';
 
 import { User, type IUserDocument } from '../../models/user.model';
 import { Student } from '../../models/student.model';
@@ -53,6 +53,10 @@ export class AuthService {
       throw AppError.forbidden('Your account has been deactivated. Contact the administrator.');
     }
 
+    if (user.role === UserRole.HOD || user.role === UserRole.DIRECTOR) {
+      throw AppError.forbidden('This role is temporarily disabled. Contact the administrator.');
+    }
+
     // Compare passwords directly (plain text)
     const isMatch = password === user.password;
 
@@ -64,7 +68,7 @@ export class AuthService {
     const payload: JWTPayload = {
       userId: user._id.toString(),
       email: user.email,
-      role: user.role as UserRole,
+      role: user.role as UserRoleType,
     };
 
     const accessToken = generateAccessToken(payload);
@@ -135,6 +139,11 @@ export class AuthService {
       throw AppError.unauthorized('User not found or inactive');
     }
 
+    if (user.role === UserRole.HOD || user.role === UserRole.DIRECTOR) {
+      await RefreshToken.findByIdAndDelete(existingToken._id);
+      throw AppError.forbidden('This role is temporarily disabled. Contact the administrator.');
+    }
+
     // Revoke old token
     existingToken.isRevoked = true;
     await existingToken.save();
@@ -143,7 +152,7 @@ export class AuthService {
     const payload: JWTPayload = {
       userId: user._id.toString(),
       email: user.email,
-      role: user.role as UserRole,
+      role: user.role as UserRoleType,
     };
 
     const newAccessToken = generateAccessToken(payload);

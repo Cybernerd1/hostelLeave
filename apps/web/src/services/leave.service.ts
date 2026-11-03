@@ -54,6 +54,7 @@ export interface LeaveRequest {
   entryTime?: string;
   createdAt: string;
   updatedAt: string;
+  currentApprovalStage?: string;
 }
 
 
@@ -124,4 +125,3 @@ export const leaveApi = {
     };
   },
 };
-

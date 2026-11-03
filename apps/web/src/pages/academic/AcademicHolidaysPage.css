@@ -1,0 +1,133 @@
+.academic-holidays {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.academic-holidays__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.academic-holidays__header h1 {
+  color: var(--text-primary);
+  font-size: var(--font-size-2xl);
+  margin-bottom: var(--space-1);
+}
+.academic-holidays__header p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+.academic-holidays__section-title {
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-4);
+}
+.academic-holidays__form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.academic-holidays__form label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.academic-holidays__form input,
+.academic-holidays__form select,
+.academic-holidays__form textarea {
+  width: 100%;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+}
+.academic-holidays__form textarea {
+  resize: vertical;
+}
+.academic-holidays__form-full,
+.academic-holidays__form-actions {
+  grid-column: 1 / -1;
+}
+.academic-holidays__form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+.academic-holidays__list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-5) var(--space-6) 0;
+}
+.academic-holidays__list-header .academic-holidays__section-title {
+  margin: 0;
+}
+.academic-holidays__list-header span {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+.academic-holidays__table-wrap {
+  overflow-x: auto;
+}
+.academic-holidays__table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+.academic-holidays__table th,
+.academic-holidays__table td {
+  padding: var(--space-4) var(--space-6);
+  text-align: left;
+  border-bottom: 1px solid var(--border-secondary);
+  vertical-align: top;
+}
+.academic-holidays__table th {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.academic-holidays__table strong {
+  color: var(--text-primary);
+}
+.academic-holidays__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+.academic-holidays__state {
+  padding: var(--space-10);
+  text-align: center;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+.academic-holidays__state--error {
+  color: var(--color-error-700);
+}
+@media (max-width: 700px) {
+  .academic-holidays {
+    padding: var(--space-5) var(--space-4);
+  }
+  .academic-holidays__form {
+    grid-template-columns: 1fr;
+  }
+  .academic-holidays__form-full,
+  .academic-holidays__form-actions {
+    grid-column: auto;
+  }
+  .academic-holidays__table th,
+  .academic-holidays__table td {
+    padding: var(--space-3);
+  }
+}

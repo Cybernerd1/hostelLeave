@@ -36,7 +36,6 @@ const APPROVAL_ROLES = [
   UserRole.PARENT,
   UserRole.WARDEN,
   UserRole.CHIEF_WARDEN,
-  UserRole.HOD,
   UserRole.ADMIN,
 ];
 
@@ -44,16 +43,12 @@ const STATS_ROLES = [
   UserRole.ADMIN,
   UserRole.WARDEN,
   UserRole.CHIEF_WARDEN,
-  UserRole.HOD,
-  UserRole.DIRECTOR,
 ];
 
 const ALL_LEAVES_ROLES = [
   UserRole.ADMIN,
-  UserRole.DIRECTOR,
   UserRole.WARDEN,
   UserRole.CHIEF_WARDEN,
-  UserRole.HOD,
 ];
 
 

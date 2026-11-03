@@ -945,7 +945,7 @@ export class AdminService {
       .lean();
   }
 
-  // ─── Staff (Warden, Chief Warden, HOD, Guard, VC) ─────────────────────────
+  // ─── Staff (Warden, Chief Warden, Guard) ──────────────────────────────────
 
   async createStaff(data: Record<string, unknown>, adminId: string) {
     const email = data.email as string;
@@ -974,12 +974,12 @@ export class AdminService {
   async getStaff(role?: string) {
     const filter: Record<string, unknown> = {};
     if (role) {
+      if (role === UserRole.HOD || role === UserRole.DIRECTOR) return [];
       filter.role = role;
     } else {
       filter.role = {
         $in: [
-          UserRole.WARDEN, UserRole.CHIEF_WARDEN, UserRole.HOD,
-          UserRole.DIRECTOR, UserRole.GUARD,
+          UserRole.WARDEN, UserRole.CHIEF_WARDEN, UserRole.GUARD,
         ],
       };
     }

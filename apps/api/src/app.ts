@@ -26,6 +26,7 @@ import qrRoutes from './modules/qr/qr.routes';
 import notificationRoutes from './modules/notification/notification.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import reportRoutes from './modules/reports/reports.routes';
+import academicHolidayRoutes from './modules/academicHoliday/academicHoliday.routes';
 
 const app = express();
 
@@ -61,6 +62,15 @@ app.use('/uploads', express.static(path.resolve(config.upload.dir)));
 
 // ─── Health Check ────────────────────────────────────────────────────────────
 
+// Render and other platform probes may request the service root even though
+// the documented health endpoint lives under /api/v1/health.
+app.get('/', (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Hostel Leave Management API is running',
+  });
+});
+
 app.get('/api/v1/health', (_req, res) => {
   res.status(200).json({
     success: true,
@@ -83,6 +93,7 @@ app.use('/api/v1/guard', guardRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/reports', reportRoutes);
+app.use('/api/v1/academic-holidays', academicHolidayRoutes);
 
 // ─── Error Handling ──────────────────────────────────────────────────────────
 

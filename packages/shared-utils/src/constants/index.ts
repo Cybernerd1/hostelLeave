@@ -63,7 +63,6 @@ export const APPROVAL_ROLES: UserRole[] = [
   UserRole.PARENT,
   UserRole.WARDEN,
   UserRole.CHIEF_WARDEN,
-  UserRole.HOD,
 ];
 
 /**
@@ -73,8 +72,6 @@ export const WEB_DASHBOARD_ROLES: UserRole[] = [
   UserRole.ADMIN,
   UserRole.WARDEN,
   UserRole.CHIEF_WARDEN,
-  UserRole.HOD,
-  UserRole.DIRECTOR,
   UserRole.GUARD,
   UserRole.STUDENT,
   UserRole.PARENT,
@@ -276,15 +273,10 @@ export const ROLE_NAVIGATION: Record<
     { label: 'Leave History', path: '/chief-warden/history', icon: 'History' },
   ],
   [UserRole.HOD]: [
-    { label: 'Dashboard', path: '/hod', icon: 'LayoutDashboard' },
-    { label: 'Pending Leaves', path: '/hod/pending', icon: 'ClipboardList' },
-    { label: 'Leave History', path: '/hod/history', icon: 'History' },
+    // Temporarily disabled; retained as an empty entry for reversible re-enabling.
   ],
   [UserRole.DIRECTOR]: [
-    { label: 'Dashboard', path: '/director', icon: 'LayoutDashboard' },
-    { label: 'All Leaves', path: '/director/leaves', icon: 'FileText' },
-    { label: 'Analytics', path: '/director/analytics', icon: 'BarChart3' },
-    { label: 'Reports', path: '/director/reports', icon: 'FileSpreadsheet' },
+    // Temporarily disabled; retained as an empty entry for reversible re-enabling.
   ],
   [UserRole.GUARD]: [
     { label: 'Dashboard', path: '/guard', icon: 'LayoutDashboard' },
