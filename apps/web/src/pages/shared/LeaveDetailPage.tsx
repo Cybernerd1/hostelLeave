@@ -5,7 +5,7 @@
  * workflow progress tracker, and approve/reject actions for approver roles.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
@@ -128,12 +128,17 @@ export function LeaveDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [remarks, setRemarks] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
+  const actionInFlight = useRef(false);
 
   const fetchLeave = useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
+    setLeave(null);
     try {
       const data = await leaveApi.getById(id);
+      if (!data) {
+        throw new Error('Leave request not found');
+      }
       setLeave(data);
     } catch {
       showError('Failed to load leave details. Please try again.');
@@ -187,11 +192,12 @@ export function LeaveDetailPage() {
   };
 
   const handleApprovalAction = async (action: 'approved' | 'rejected') => {
-    if (!id) return;
+    if (!id || actionInFlight.current) return;
     if (action === 'rejected' && !remarks.trim()) {
       showError('Please provide a reason for rejection.');
       return;
     }
+    actionInFlight.current = true;
     setActionLoading(true);
     try {
       await leaveApi.processApproval(id, action, remarks.trim() || undefined);
@@ -202,8 +208,12 @@ export function LeaveDetailPage() {
       await fetchLeave();
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      // Refresh the detail view after a stale/concurrent action so the
+      // current status replaces the action panel immediately.
+      await fetchLeave();
       showError(msg || `Failed to ${action === 'approved' ? 'approve' : 'reject'} leave.`);
     } finally {
+      actionInFlight.current = false;
       setActionLoading(false);
     }
   };
@@ -231,22 +241,6 @@ export function LeaveDetailPage() {
   }
 
   const statusInfo = leave ? (STATUS_CONFIG[leave.status] ?? STATUS_CONFIG['draft']) : null;
-
-  const leaveStartKey = dateKey(leave.fromDate);
-  const leaveEndKey = dateKey(leave.toDate);
-  const requestedDays = expandRange(leaveStartKey, leaveEndKey);
-  const requestedDaySet = new Set(requestedDays);
-  const holidayDaySet = new Set(holidays.flatMap((holiday) => expandRange(holiday.startDate, holiday.endDate)));
-  const overlapDaySet = new Set(requestedDays.filter((day) => holidayDaySet.has(day)));
-  const holidayRecordsWithinRequest = holidays.filter((holiday) =>
-    expandRange(holiday.startDate, holiday.endDate).some((day) => requestedDaySet.has(day)),
-  ).length;
-  const displayStart = dateFromKey(leaveStartKey);
-  displayStart.setUTCDate(1);
-  const displayEnd = dateFromKey(leaveEndKey);
-  displayEnd.setUTCDate(new Date(Date.UTC(displayEnd.getUTCFullYear(), displayEnd.getUTCMonth() + 1, 0)).getUTCDate());
-  const calendarDays = expandRange(dateKey(displayStart), dateKey(displayEnd));
-  const leadingBlankDays = (displayStart.getUTCDay() + 6) % 7;
 
   // ── Workflow progress tracker ─────────────────────────────────────
   /** Determine the state of each workflow stage based on leave status + approvals */
@@ -285,6 +279,22 @@ export function LeaveDetailPage() {
       </div>
     );
   }
+
+  const leaveStartKey = dateKey(leave.fromDate);
+  const leaveEndKey = dateKey(leave.toDate);
+  const requestedDays = expandRange(leaveStartKey, leaveEndKey);
+  const requestedDaySet = new Set(requestedDays);
+  const holidayDaySet = new Set(holidays.flatMap((holiday) => expandRange(holiday.startDate, holiday.endDate)));
+  const overlapDaySet = new Set(requestedDays.filter((day) => holidayDaySet.has(day)));
+  const holidayRecordsWithinRequest = holidays.filter((holiday) =>
+    expandRange(holiday.startDate, holiday.endDate).some((day) => requestedDaySet.has(day)),
+  ).length;
+  const displayStart = dateFromKey(leaveStartKey);
+  displayStart.setUTCDate(1);
+  const displayEnd = dateFromKey(leaveEndKey);
+  displayEnd.setUTCDate(new Date(Date.UTC(displayEnd.getUTCFullYear(), displayEnd.getUTCMonth() + 1, 0)).getUTCDate());
+  const calendarDays = expandRange(dateKey(displayStart), dateKey(displayEnd));
+  const leadingBlankDays = (displayStart.getUTCDay() + 6) % 7;
 
   return (
     <div className="leave-detail">

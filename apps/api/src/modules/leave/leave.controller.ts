@@ -6,7 +6,7 @@ import type { Request, Response } from 'express';
 
 import { asyncHandler } from '../../middleware/asyncHandler';
 import { leaveService } from './leave.service';
-import { sendSuccess, sendPaginated, sendCreated } from '../../utils/response.util';
+import { sendSuccess, sendPaginated, sendCreated, sendError } from '../../utils/response.util';
 import { pdfService } from '../pdf/pdf.service';
 import { cloudinaryService } from '../../utils/cloudinary.service';
 import { UserRole } from '@hostel/shared-types';
@@ -55,7 +55,8 @@ export const getLeaveById = asyncHandler(async (req: Request, res: Response) => 
   const leaveRequest = await leaveService.getLeaveById(id);
 
   if (!leaveRequest) {
-    return sendSuccess(res, null, 'Leave request not found');
+    sendError(res, 'Leave request not found', 404, 'NOT_FOUND');
+    return;
   }
 
   return sendSuccess(res, leaveRequest, 'Leave details retrieved');

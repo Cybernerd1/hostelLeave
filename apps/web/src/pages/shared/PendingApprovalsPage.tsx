@@ -3,7 +3,7 @@
  * Used by Parent, Warden, Chief Warden, HOD
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { leaveApi, type LeaveRequest } from '@/services/leave.service';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,6 +37,7 @@ export function PendingApprovalsPage() {
   const [modal, setModal] = useState<{ leaveId: string; action: 'approve' | 'reject' } | null>(null);
   const [remarks, setRemarks] = useState('');
   const [processing, setProcessing] = useState(false);
+  const processingRef = useRef(false);
 
   const fetchPending = useCallback(async () => {
     setLoading(true);
@@ -60,7 +61,8 @@ export function PendingApprovalsPage() {
   const closeModal = () => { setModal(null); setRemarks(''); };
 
   const handleConfirm = async () => {
-    if (!modal) return;
+    if (!modal || processingRef.current) return;
+    processingRef.current = true;
     setProcessing(true);
     try {
       await leaveApi.processApproval(modal.leaveId, modal.action, remarks);
@@ -69,8 +71,15 @@ export function PendingApprovalsPage() {
       closeModal();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      showError(e.response?.data?.message || 'Action failed.');
+      const message = e.response?.data?.message || 'Action failed.';
+      // Refresh after a stale action so a request processed in another tab or
+      // by another approver is removed from this pending list.
+      if (message.includes('not pending approval')) {
+        await fetchPending();
+      }
+      showError(message);
     } finally {
+      processingRef.current = false;
       setProcessing(false);
     }
   };

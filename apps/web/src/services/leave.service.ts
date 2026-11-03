@@ -60,7 +60,10 @@ export interface LeaveRequest {
 
 export const leaveApi = {
   getById: async (id: string): Promise<LeaveRequest> => {
-    const response = await api.get<{ success: boolean; data: LeaveRequest }>(`/leaves/${id}`);
+    const response = await api.get<{ success: boolean; data: LeaveRequest | null }>(`/leaves/${id}`);
+    if (!response.data.data) {
+      throw new Error('Leave request not found');
+    }
     return response.data.data;
   },
 
