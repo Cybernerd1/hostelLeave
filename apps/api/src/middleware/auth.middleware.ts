@@ -55,10 +55,6 @@ export async function authenticate(
       throw AppError.forbidden('Your account has been deactivated');
     }
 
-    if (user.role === UserRole.HOD || user.role === UserRole.DIRECTOR) {
-      throw AppError.forbidden('This role is temporarily disabled');
-    }
-
     // Attach user to request
     req.user = {
       userId: user._id.toString(),
@@ -88,7 +84,7 @@ export async function optionalAuth(
       const decoded = verifyAccessToken(token);
       const user = await User.findById(decoded.userId).select('_id email role isActive').lean();
 
-      if (user && user.isActive && user.role !== UserRole.HOD && user.role !== UserRole.DIRECTOR) {
+      if (user && user.isActive) {
         req.user = {
           userId: user._id.toString(),
           email: user.email,

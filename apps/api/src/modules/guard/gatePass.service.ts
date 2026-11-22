@@ -15,6 +15,7 @@ import { generateRandomString } from '@hostel/shared-utils';
 import { computeEffectiveStatus } from './gatePassStatus';
 
 import { GatePass, type IGatePassDocument } from '../../models/gatePass.model';
+import { GateMovement } from '../../models/gateMovement.model';
 import { LeaveRequest } from '../../models/leaveRequest.model';
 import { Student } from '../../models/student.model';
 import { AppError } from '../../utils/AppError';
@@ -174,6 +175,24 @@ export class GatePassService {
     await Student.updateOne({ _id: pass.studentId }, { $set: { presenceStatus: PresenceStatus.OUT_OF_HOSTEL } });
     await LeaveRequest.updateOne({ _id: pass.leaveRequestId }, { $set: { exitTime: now, exitGuardId: guardId } });
 
+    // Log to GateMovement for historical tracking
+    try {
+      await GateMovement.create({
+        studentId: pass.studentId,
+        hostelId: pass.hostelId,
+        gatePassId: pass._id,
+        leaveRequestId: pass.leaveRequestId,
+        movementType: 'exit',
+        actualTimestamp: now,
+        verifiedBy: guardId,
+        verifiedGuardId: guardId,
+        remarks,
+      });
+    } catch (err) {
+      logger.error(`Failed to log GateMovement for exit: ${err}`);
+      // Don't fail the exit recording if GateMovement logging fails
+    }
+
     await createAuditLog({
       userId: guardId,
       action: 'scan',
@@ -227,6 +246,24 @@ export class GatePassService {
       { _id: pass.leaveRequestId },
       { $set: { entryTime: now, entryGuardId: guardId, status: 'completed' } },
     );
+
+    // Log to GateMovement for historical tracking
+    try {
+      await GateMovement.create({
+        studentId: pass.studentId,
+        hostelId: pass.hostelId,
+        gatePassId: pass._id,
+        leaveRequestId: pass.leaveRequestId,
+        movementType: 'entry',
+        actualTimestamp: now,
+        verifiedBy: guardId,
+        verifiedGuardId: guardId,
+        remarks,
+      });
+    } catch (err) {
+      logger.error(`Failed to log GateMovement for entry: ${err}`);
+      // Don't fail the return recording if GateMovement logging fails
+    }
 
     await createAuditLog({
       userId: guardId,

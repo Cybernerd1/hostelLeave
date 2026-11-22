@@ -1,0 +1,619 @@
+/* ================================================================
+   Student Hostel Presence & Absence Monitoring Dashboard
+   ================================================================ */
+
+.sp-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem;
+  background: var(--surface-secondary);
+  min-height: 100vh;
+}
+
+/* ─── Header ─────────────────────────────────────────────────── */
+
+.sp-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.sp-header__content {
+  flex: 1;
+}
+
+.sp-header__title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem;
+}
+
+.sp-header__icon {
+  color: var(--color-primary-600);
+  flex-shrink: 0;
+}
+
+.sp-header__subtitle {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ─── Controls ───────────────────────────────────────────────── */
+
+.sp-controls {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.sp-controls__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 200px;
+}
+
+.sp-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sp-date-picker,
+.sp-select {
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--border-primary);
+  border-radius: 8px;
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  transition: border-color var(--transition-fast);
+}
+
+.sp-date-picker:hover,
+.sp-select:hover {
+  border-color: var(--color-neutral-400);
+}
+
+.sp-date-picker:focus,
+.sp-select:focus {
+  outline: none;
+  border-color: var(--color-primary-600);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+/* ─── Summary Cards ──────────────────────────────────────────── */
+
+.sp-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.sp-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: var(--surface-primary);
+  border: 1px solid var(--border-primary);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.sp-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.sp-card__icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.sp-card__content {
+  flex: 1;
+}
+
+.sp-card__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 0.5rem;
+}
+
+.sp-card__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Card color variants */
+.sp-card--blue .sp-card__label {
+  color: rgba(79, 70, 229, 0.7);
+}
+
+.sp-card--blue {
+  border-left: 4px solid #4f46e5;
+}
+
+.sp-card--amber {
+  border-left: 4px solid #d97706;
+}
+
+.sp-card--green {
+  border-left: 4px solid #059669;
+}
+
+.sp-card--red {
+  border-left: 4px solid #dc2626;
+}
+
+.sp-card--orange {
+  border-left: 4px solid #f59e0b;
+}
+
+.sp-card--gray {
+  border-left: 4px solid #6b7280;
+}
+
+/* ─── Section ────────────────────────────────────────────────── */
+
+.sp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sp-section__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* ─── Hostel Statistics ──────────────────────────────────────── */
+
+.sp-hostel-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.sp-hostel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  border: 1.5px solid var(--border-primary);
+  border-radius: 12px;
+  background: var(--surface-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sp-hostel-card:hover {
+  border-color: var(--color-primary-600);
+  box-shadow: var(--shadow-md);
+}
+
+.sp-hostel-card--active {
+  border-color: var(--color-primary-600);
+  background: rgba(79, 70, 229, 0.05);
+  box-shadow: var(--shadow-md);
+}
+
+.sp-hostel-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.sp-hostel-card__name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  flex: 1;
+}
+
+.sp-hostel-card__percentage {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary-600);
+  flex-shrink: 0;
+}
+
+.sp-hostel-card__stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.sp-hostel-card__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: var(--surface-secondary);
+}
+
+.sp-hostel-card__stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sp-hostel-card__stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sp-hostel-card__bar {
+  height: 4px;
+  background: var(--color-neutral-200);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.sp-hostel-card__bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #d97706 0%, #dc2626 100%);
+  transition: width var(--transition-fast);
+}
+
+/* ─── Tabs ───────────────────────────────────────────────────── */
+
+.sp-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border-primary);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sp-tab {
+  padding: 1rem 1.5rem;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+}
+
+.sp-tab:hover {
+  color: var(--text-primary);
+}
+
+.sp-tab--active {
+  color: var(--color-primary-600);
+  border-bottom-color: var(--color-primary-600);
+}
+
+/* ─── Search ─────────────────────────────────────────────────── */
+
+.sp-search {
+  display: flex;
+  max-width: 400px;
+}
+
+/* ─── Export Controls ────────────────────────────────────────── */
+
+.sp-export-controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--surface-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+}
+
+.sp-export-controls__group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sp-export-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.sp-export-button {
+  font-size: 0.8125rem;
+  padding: 0.5rem 0.75rem;
+  white-space: nowrap;
+}
+
+.sp-export-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─── Table ──────────────────────────────────────────────────── */
+
+.sp-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  background: var(--surface-primary);
+}
+
+.sp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.sp-table thead {
+  background: var(--surface-secondary);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.sp-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.sp-table td {
+  padding: 1rem;
+  border-top: 1px solid var(--border-primary);
+  color: var(--text-secondary);
+}
+
+.sp-table tbody tr:hover {
+  background: var(--surface-secondary);
+}
+
+.sp-table__name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ─── Status Badges ──────────────────────────────────────────── */
+
+.sp-status {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sp-status--in_hostel {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.sp-status--out_of_hostel {
+  background: rgba(217, 119, 6, 0.1);
+  color: #d97706;
+}
+
+.sp-status--overdue {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.sp-status--approved_not_exited {
+  background: rgba(107, 114, 128, 0.1);
+  color: #374151;
+}
+
+/* ─── Pagination ─────────────────────────────────────────────── */
+
+.sp-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.sp-pagination__button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sp-pagination__button:hover:not(:disabled) {
+  border-color: var(--color-primary-600);
+  color: var(--color-primary-600);
+}
+
+.sp-pagination__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sp-pagination__info {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+/* ─── Loading States ─────────────────────────────────────────── */
+
+.sp-loading,
+.sp-loading-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem;
+  color: var(--text-secondary);
+}
+
+.sp-loading-mini {
+  padding: 2rem;
+}
+
+.sp-loading p {
+  font-size: 0.9375rem;
+}
+
+/* ─── Empty State ────────────────────────────────────────────── */
+
+.sp-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  background: var(--surface-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.sp-empty p {
+  margin: 0;
+}
+
+/* ─── Error State ────────────────────────────────────────────── */
+
+.sp-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: #dc2626;
+  text-align: center;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .sp-container {
+    padding: 1rem;
+    gap: 1.5rem;
+  }
+
+  .sp-header__title {
+    font-size: 1.5rem;
+  }
+
+  .sp-controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .sp-controls__group {
+    min-width: 100%;
+  }
+
+  .sp-cards {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .sp-card {
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .sp-card__value {
+    font-size: 1.5rem;
+  }
+
+  .sp-hostel-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .sp-tabs {
+    flex-wrap: wrap;
+  }
+
+  .sp-tab {
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+  }
+
+  .sp-export-controls {
+    flex-direction: column;
+  }
+
+  .sp-export-controls__group {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .sp-export-button {
+    width: 100%;
+  }
+
+  .sp-table {
+    font-size: 0.8125rem;
+  }
+
+  .sp-table th,
+  .sp-table td {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .sp-pagination {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .sp-pagination__button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .sp-container {
+    padding: 0.75rem;
+  }
+
+  .sp-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .sp-card__icon {
+    font-size: 1.5rem;
+  }
+
+  .sp-search {
+    max-width: 100%;
+  }
+
+  .sp-hostel-card__stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}

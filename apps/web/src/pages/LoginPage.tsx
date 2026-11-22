@@ -25,6 +25,7 @@ const DEMO_CREDENTIALS: Record<string, { email: string; password: string; label:
   parent:           { email: 'parent@demo.edu',      password: 'Demo@123', label: 'Parent' },
   warden:           { email: 'warden@demo.edu',      password: 'Demo@123', label: 'Warden' },
   chief_warden:     { email: 'chiefwarden@demo.edu', password: 'Demo@123', label: 'Chief Warden' },
+  director:         { email: 'vc@demo.edu',          password: 'Demo@123', label: 'Director' },
   guard:            { email: 'guard@demo.edu',       password: 'Demo@123', label: 'Gate Guard' },
   admin:            { email: 'admin@demo.edu',       password: 'Demo@123', label: 'Administrator' },
 };
@@ -35,6 +36,7 @@ const ROLE_OPTIONS: { id: string; label: string; desc: string; icon: string }[] 
   { id: 'parent',          label: 'Parent',           desc: 'Review and respond to leave requests.',            icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 110 8 4 4 0 010-8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
   { id: 'warden',          label: 'Warden',           desc: 'Review assigned hostel leave requests.',           icon: 'M3 21h18M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16M9 7h1m4 0h1M9 11h1m4 0h1M9 15h1m4 0h1' },
   { id: 'chief_warden',    label: 'Chief Warden',     desc: 'Oversee hostels, staff and escalated approvals.',  icon: 'M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4zM9 12l2 2 4-4' },
+  { id: 'director',        label: 'Director',         desc: 'Oversee institutional operations, hostels and administration.', icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z' },
   { id: 'guard',           label: 'Gate Guard',       desc: 'Verify QR passes at the gate.',                    icon: 'M4 7V4h3M20 7V4h-3M4 17v3h3m13-3v3h-3M7 12h10' },
   { id: 'admin',           label: 'Administrator',    desc: 'Manage students, staff, hostels and records.',     icon: 'M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6M9 8h6m2 8h6' },
 ];
@@ -55,7 +57,6 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showDemoBanner, setShowDemoBanner] = useState(true);
   const { error: showError } = useFeedback();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -65,19 +66,11 @@ export function LoginPage() {
   useEffect(() => {
     if (demoCreds) {
       setEmail(demoCreds.email);
-      setShowDemoBanner(true);
     } else {
       setEmail('');
     }
     setPassword('');
   }, [roleParam]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fillDemoCredentials = () => {
-    if (demoCreds) {
-      setEmail(demoCreds.email);
-      setPassword(demoCreds.password);
-    }
-  };
 
   const handleContinue = () => {
     if (selectedRole && DEMO_CREDENTIALS[selectedRole]) {
@@ -236,36 +229,7 @@ export function LoginPage() {
               </button>
 
               {/* Demo credentials banner */}
-              {demoCreds && showDemoBanner && (
-                <div className="lp-demo" id="demo-credentials-banner" role="note">
-                  <div className="lp-demo__head">
-                    <span className="lp-demo__title">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M12 8v4M12 16h.01" />
-                      </svg>
-                      Demo credentials
-                    </span>
-                    <button
-                      type="button"
-                      className="lp-demo__close"
-                      onClick={() => setShowDemoBanner(false)}
-                      aria-label="Dismiss demo credentials"
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                        <path d="M18 6L6 18M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <dl className="lp-demo__creds">
-                    <div><dt>Email</dt><dd><code>{demoCreds.email}</code></dd></div>
-                    <div><dt>Password</dt><dd><code>{demoCreds.password}</code></dd></div>
-                  </dl>
-                  <button type="button" className="lp-demo__fill" onClick={fillDemoCredentials} id="fill-demo-credentials">
-                    Auto-fill credentials
-                  </button>
-                </div>
-              )}
+              {/* Demo credentials banner removed - security best practice */}
 
               <form onSubmit={handleSubmit} className="lp-form">
                 <Input

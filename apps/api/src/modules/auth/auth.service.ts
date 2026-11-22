@@ -53,10 +53,6 @@ export class AuthService {
       throw AppError.forbidden('Your account has been deactivated. Contact the administrator.');
     }
 
-    if (user.role === UserRole.HOD || user.role === UserRole.DIRECTOR) {
-      throw AppError.forbidden('This role is temporarily disabled. Contact the administrator.');
-    }
-
     // Compare passwords directly (plain text)
     const isMatch = password === user.password;
 
@@ -137,11 +133,6 @@ export class AuthService {
     if (!user || !user.isActive) {
       await RefreshToken.findByIdAndDelete(existingToken._id);
       throw AppError.unauthorized('User not found or inactive');
-    }
-
-    if (user.role === UserRole.HOD || user.role === UserRole.DIRECTOR) {
-      await RefreshToken.findByIdAndDelete(existingToken._id);
-      throw AppError.forbidden('This role is temporarily disabled. Contact the administrator.');
     }
 
     // Revoke old token

@@ -69,6 +69,7 @@ import { RoomsPage } from '@/pages/admin/RoomsPage';
 import { HostelRoomsPage } from '@/pages/admin/HostelRoomsPage';
 import { StaffPage } from '@/pages/admin/StaffPage';
 import { AuditLogsPage } from '@/pages/admin/AuditLogsPage';
+import { StudentPresencePage } from '@/pages/admin/StudentPresencePage';
 
 export default function App() {
   return (
@@ -160,6 +161,7 @@ export default function App() {
               <Route path="/admin/hostels/:id/rooms" element={<HostelRoomsPage />} />
               <Route path="/admin/rooms" element={<RoomsPage />} />
               <Route path="/admin/holidays" element={<AcademicHolidaysPage />} />
+              <Route path="/admin/student-presence" element={<StudentPresencePage />} />
              </Route>
            </Route>
 
@@ -194,6 +196,20 @@ export default function App() {
               <Route path="/admin/audit-logs" element={<AuditLogsPage />} />
               <Route path="/admin/notifications" element={<NotificationsPage />} />
               <Route path="/admin/profile" element={<ProfilePage />} />
+              <Route path="/admin/student-presence" element={<StudentPresencePage />} />
+            </Route>
+          </Route>
+
+          {/* ─── Director Routes ─────────────────────────────────────── */}
+          <Route element={<ProtectedRoute allowedRoles={[UserRole.DIRECTOR]} />}>
+            <Route element={<DashboardLayout />}>
+              <Route path="/director/dashboard" element={<AdminDashboard />} />
+              <Route path="/director/leaves" element={<AllLeavesPage />} />
+              <Route path="/director/holidays" element={<AcademicHolidaysPage />} />
+              <Route path="/director/reports" element={<ReportsPage />} />
+              <Route path="/director/notifications" element={<NotificationsPage />} />
+              <Route path="/director/profile" element={<ProfilePage />} />
+              <Route path="/director/student-presence" element={<StudentPresencePage />} />
             </Route>
           </Route>
 

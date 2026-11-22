@@ -124,6 +124,7 @@ export const APPROVAL_ROLES: UserRole[] = [
  */
 export const WEB_DASHBOARD_ROLES: UserRole[] = [
   UserRole.ADMIN,
+  UserRole.DIRECTOR,
   UserRole.WARDEN,
   UserRole.CHIEF_WARDEN,
   UserRole.GUARD,
@@ -330,7 +331,13 @@ export const ROLE_NAVIGATION: Record<
     // Temporarily disabled; retained as an empty entry for reversible re-enabling.
   ],
   [UserRole.DIRECTOR]: [
-    // Temporarily disabled; retained as an empty entry for reversible re-enabling.
+    { label: 'Dashboard', path: '/director/dashboard', icon: 'LayoutDashboard' },
+    { label: 'All Leaves', path: '/director/leaves', icon: 'FileText' },
+    { label: 'Academic Holidays', path: '/director/holidays', icon: 'Calendar' },
+    { label: 'Reports', path: '/director/reports', icon: 'BarChart3' },
+    { label: 'Student Presence', path: '/director/student-presence', icon: 'Users' },
+    { label: 'Notifications', path: '/director/notifications', icon: 'Bell' },
+    { label: 'Profile', path: '/director/profile', icon: 'User' },
   ],
   [UserRole.GUARD]: [
     { label: 'Dashboard', path: '/guard', icon: 'LayoutDashboard' },
