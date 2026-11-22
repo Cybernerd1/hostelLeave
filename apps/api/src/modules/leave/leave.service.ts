@@ -902,11 +902,37 @@ export class LeaveService {
     // Authorize: Check if actor has permission to view this student's leaves
     if (actorRole === UserRole.PARENT) {
       // Parent can only view their own child's leaves
-      const student = await Student.findById(studentId).populate('parentId', 'userId').lean();
-      if (!student || !student.parentId || student.parentId.userId !== actorUserId) {
+      const student = await Student.findById(studentId).populate({
+        path: 'parentId',
+        select: 'userId',
+      }).lean();
+      
+      if (!student || !student.parentId) {
         return {
           data: [],
-          pagination: { page: query.page, limit: query.limit, total: 0, pages: 0 },
+          pagination: {
+            page: query.page,
+            limit: query.limit,
+            total: 0,
+            totalPages: 0,
+            hasNextPage: false,
+            hasPrevPage: false,
+          },
+        };
+      }
+
+      const parentId = student.parentId as any;
+      if (parentId.userId !== actorUserId) {
+        return {
+          data: [],
+          pagination: {
+            page: query.page,
+            limit: query.limit,
+            total: 0,
+            totalPages: 0,
+            hasNextPage: false,
+            hasPrevPage: false,
+          },
         };
       }
     } else if (actorRole === UserRole.WARDEN) {
@@ -917,7 +943,14 @@ export class LeaveService {
       if (!student || !hostelIds.some((hid) => hid.equals(student.hostelId))) {
         return {
           data: [],
-          pagination: { page: query.page, limit: query.limit, total: 0, pages: 0 },
+          pagination: {
+            page: query.page,
+            limit: query.limit,
+            total: 0,
+            totalPages: 0,
+            hasNextPage: false,
+            hasPrevPage: false,
+          },
         };
       }
     }
@@ -949,13 +982,16 @@ export class LeaveService {
       .limit(query.limit)
       .lean();
 
+    const totalPages = Math.ceil(total / query.limit);
     return {
       data,
       pagination: {
         page: query.page,
         limit: query.limit,
         total,
-        pages: Math.ceil(total / query.limit),
+        totalPages,
+        hasNextPage: query.page < totalPages,
+        hasPrevPage: query.page > 1,
       },
     };
   }
