@@ -10,7 +10,7 @@ import { Hostel } from '../../models/hostel.model';
 import { Student } from '../../models/student.model';
 import { absenceCalculationService, type AbsenceMetrics, type HostelStatistics } from './absence.calculation';
 import { AppError } from '../../utils/AppError';
-import type { ObjectId } from 'mongoose';
+import mongoose from 'mongoose';
 
 export class PresenceService {
   /**
@@ -19,7 +19,7 @@ export class PresenceService {
    * - Warden: Can only access their assigned hostel(s)
    * - Other roles: No access
    */
-  async resolveHostelScope(userId?: string, userRole?: string, requestedHostelId?: string): Promise<ObjectId[] | null> {
+  async resolveHostelScope(userId?: string, userRole?: string, requestedHostelId?: string): Promise<mongoose.Types.ObjectId[] | null> {
     if (!userRole) {
       return [];
     }

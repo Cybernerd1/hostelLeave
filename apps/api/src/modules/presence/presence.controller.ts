@@ -92,11 +92,7 @@ export class PresenceController {
     res.json({
       success: true,
       data: result.data,
-      meta: buildPaginationMeta({
-        page: result.page,
-        limit: result.limit,
-        total: result.total,
-      }),
+      meta: buildPaginationMeta(result.page, result.limit, result.total),
     });
   });
 
@@ -125,11 +121,7 @@ export class PresenceController {
     res.json({
       success: true,
       data: result.data,
-      meta: buildPaginationMeta({
-        page: result.page,
-        limit: result.limit,
-        total: result.total,
-      }),
+      meta: buildPaginationMeta(result.page, result.limit, result.total),
     });
   });
 
@@ -163,11 +155,7 @@ export class PresenceController {
     res.json({
       success: true,
       data: result.data,
-      meta: buildPaginationMeta({
-        page: result.page,
-        limit: result.limit,
-        total: result.total,
-      }),
+      meta: buildPaginationMeta(result.page, result.limit, result.total),
     });
   });
 
@@ -201,11 +189,7 @@ export class PresenceController {
     res.json({
       success: true,
       data: result.data,
-      meta: buildPaginationMeta({
-        page: result.page,
-        limit: result.limit,
-        total: result.total,
-      }),
+      meta: buildPaginationMeta(result.page, result.limit, result.total),
     });
   });
 
@@ -239,11 +223,7 @@ export class PresenceController {
     res.json({
       success: true,
       data: result.data,
-      meta: buildPaginationMeta({
-        page: result.page,
-        limit: result.limit,
-        total: result.total,
-      }),
+      meta: buildPaginationMeta(result.page, result.limit, result.total),
     });
   });
 

@@ -22,18 +22,18 @@ import { Student } from '../../models/student.model';
 import { LeaveRequest } from '../../models/leaveRequest.model';
 import { Hostel } from '../../models/hostel.model';
 import { config } from '../../config';
-import type { ObjectId } from 'mongoose';
+import mongoose from 'mongoose';
 
 export interface StudentAbsenceData {
-  studentId: ObjectId;
+  studentId: mongoose.Types.ObjectId;
   name: string;
   rollNumber: string;
-  hostelId?: ObjectId;
+  hostelId?: mongoose.Types.ObjectId;
   hostelName?: string;
-  roomId?: ObjectId;
+  roomId?: mongoose.Types.ObjectId;
   roomNumber?: string;
-  departmentId: ObjectId;
-  courseId: ObjectId;
+  departmentId: mongoose.Types.ObjectId;
+  courseId: mongoose.Types.ObjectId;
   phone?: string;
   currentPresenceStatus: string;
   actualExitTime?: Date;
@@ -53,7 +53,7 @@ export interface AbsenceMetrics {
 }
 
 export interface HostelStatistics {
-  hostelId: ObjectId;
+  hostelId: mongoose.Types.ObjectId;
   hostelName: string;
   totalAssignedStudents: number;
   currentlyOutside: number;
@@ -106,7 +106,7 @@ export function getDateBoundaries(dateString: string, timezone: string = config.
  *   3. Students who exited before the date and returned after the date
  */
 export async function isStudentAbsentOnDate(
-  studentId: ObjectId,
+  studentId: mongoose.Types.ObjectId,
   dayStart: Date,
   dayEnd: Date,
 ): Promise<boolean> {
@@ -137,7 +137,7 @@ export async function isStudentAbsentOnDate(
  * Get detailed absence data for a student on a specific date.
  */
 export async function getStudentAbsenceOnDate(
-  studentId: ObjectId,
+  studentId: mongoose.Types.ObjectId,
   dayStart: Date,
   dayEnd: Date,
 ): Promise<StudentAbsenceData | null> {
@@ -204,7 +204,7 @@ export async function getStudentAbsenceOnDate(
 export async function getAbsentStudentsOnDate(
   dayStart: Date,
   dayEnd: Date,
-  hostelIds?: ObjectId[],
+  hostelIds?: mongoose.Types.ObjectId[],
   page: number = 1,
   limit: number = 20,
   search?: string,
@@ -269,7 +269,7 @@ export async function getAbsentStudentsOnDate(
   // Enrich each student with absence details
   const data: StudentAbsenceData[] = [];
   for (const student of students) {
-    const absenceData = await getStudentAbsenceOnDate(student._id as ObjectId, dayStart, dayEnd);
+    const absenceData = await getStudentAbsenceOnDate(student._id, dayStart, dayEnd);
     if (absenceData) {
       data.push(absenceData);
     }
@@ -282,7 +282,7 @@ export async function getAbsentStudentsOnDate(
  * Get students currently outside (no return movement yet).
  */
 export async function getCurrentlyOutsideStudents(
-  hostelIds?: ObjectId[],
+  hostelIds?: mongoose.Types.ObjectId[],
   page: number = 1,
   limit: number = 20,
   search?: string,
@@ -345,7 +345,7 @@ export async function getCurrentlyOutsideStudents(
         : null;
 
       data.push({
-        studentId: student._id as ObjectId,
+        studentId: student._id,
         name: student.name,
         rollNumber: student.rollNumber,
         hostelId: student.hostelId,
@@ -371,7 +371,7 @@ export async function getCurrentlyOutsideStudents(
  * Get students who are overdue (exit recorded, expected return passed, no return yet).
  */
 export async function getOverdueStudents(
-  hostelIds?: ObjectId[],
+  hostelIds?: mongoose.Types.ObjectId[],
   page: number = 1,
   limit: number = 20,
   search?: string,
@@ -412,7 +412,7 @@ export async function getOverdueStudents(
 export async function getReturnedTodayStudents(
   dayStart: Date,
   dayEnd: Date,
-  hostelIds?: ObjectId[],
+  hostelIds?: mongoose.Types.ObjectId[],
   page: number = 1,
   limit: number = 20,
   search?: string,
@@ -432,8 +432,7 @@ export async function getReturnedTodayStudents(
     const returnMovement = await GateMovement.findOne({
       studentId: exit.studentId,
       movementType: 'entry',
-      actualTimestamp: { $gte: dayStart, $lt: dayEnd },
-      actualTimestamp: { $gt: exit.actualTimestamp },
+      actualTimestamp: { $gte: dayStart, $lt: dayEnd, $gt: exit.actualTimestamp },
     }).lean();
 
     if (returnMovement) {
@@ -470,7 +469,7 @@ export async function getReturnedTodayStudents(
 
   const data: StudentAbsenceData[] = [];
   for (const student of students) {
-    const absenceData = await getStudentAbsenceOnDate(student._id as ObjectId, dayStart, dayEnd);
+    const absenceData = await getStudentAbsenceOnDate(student._id, dayStart, dayEnd);
     if (absenceData) {
       data.push(absenceData);
     }
@@ -485,7 +484,7 @@ export async function getReturnedTodayStudents(
 export async function getApprovedNotExitedStudents(
   dayStart: Date,
   dayEnd: Date,
-  hostelIds?: ObjectId[],
+  hostelIds?: mongoose.Types.ObjectId[],
   page: number = 1,
   limit: number = 20,
   search?: string,
@@ -531,7 +530,7 @@ export async function getApprovedNotExitedStudents(
     const gatePass = approveds.find((gp) => gp.studentId.toString() === student._id.toString());
     if (gatePass) {
       data.push({
-        studentId: student._id as ObjectId,
+        studentId: student._id,
         name: student.name,
         rollNumber: student.rollNumber,
         hostelId: student.hostelId,
@@ -558,7 +557,7 @@ export async function getApprovedNotExitedStudents(
 export async function calculateAbsenceMetrics(
   dayStart: Date,
   dayEnd: Date,
-  hostelIds?: ObjectId[],
+  hostelIds?: mongoose.Types.ObjectId[],
 ): Promise<AbsenceMetrics> {
   // Count total registered students
   const totalQuery: any = { isActive: true, applicationStatus: 'allocated' };
@@ -598,7 +597,7 @@ export async function calculateAbsenceMetrics(
 export async function getHostelStatistics(
   dayStart: Date,
   dayEnd: Date,
-  hostelIds?: ObjectId[],
+  hostelIds?: mongoose.Types.ObjectId[],
 ): Promise<HostelStatistics[]> {
   // Get all hostels to query
   const hostelQuery: any = { isActive: true };
@@ -611,7 +610,7 @@ export async function getHostelStatistics(
   const stats: HostelStatistics[] = [];
 
   for (const hostel of hostels) {
-    const metrics = await calculateAbsenceMetrics(dayStart, dayEnd, [hostel._id as ObjectId]);
+    const metrics = await calculateAbsenceMetrics(dayStart, dayEnd, [hostel._id]);
 
     const absencePercentage =
       metrics.totalRegisteredStudents > 0
@@ -619,7 +618,7 @@ export async function getHostelStatistics(
         : 0;
 
     stats.push({
-      hostelId: hostel._id as ObjectId,
+      hostelId: hostel._id,
       hostelName: hostel.name,
       totalAssignedStudents: metrics.totalRegisteredStudents,
       currentlyOutside: metrics.currentlyOutside,
