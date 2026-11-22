@@ -704,7 +704,7 @@ export class AdminService {
    * Wardens with no assigned hostel get an empty array — never unrestricted.
    */
   private async getAccessibleHostelIds(actorId: string, actorRole: UserRole): Promise<string[] | null> {
-    if (actorRole === UserRole.ADMIN || actorRole === UserRole.CHIEF_WARDEN) {
+    if (actorRole === UserRole.ADMIN || actorRole === UserRole.CHIEF_WARDEN || actorRole === UserRole.DIRECTOR) {
       return null;
     }
     if (actorRole === UserRole.WARDEN) {
@@ -1151,7 +1151,7 @@ export class AdminService {
   async getStaff(role?: string) {
     const filter: Record<string, unknown> = {};
     if (role) {
-      if (role === UserRole.HOD || role === UserRole.DIRECTOR) return [];
+      if (role === UserRole.HOD) return [];
       filter.role = role;
     } else {
       filter.role = {

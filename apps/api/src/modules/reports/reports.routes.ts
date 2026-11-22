@@ -13,6 +13,7 @@ const router = Router();
 
 const allowedRoles = [
   UserRole.ADMIN,
+  UserRole.DIRECTOR,
   UserRole.WARDEN,
   UserRole.CHIEF_WARDEN,
 ];

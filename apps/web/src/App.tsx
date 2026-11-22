@@ -28,6 +28,7 @@ import { StudentDashboard } from '@/pages/student/StudentDashboard';
 import { ParentDashboard } from '@/pages/parent/ParentDashboard';
 import { WardenDashboard } from '@/pages/warden/WardenDashboard';
 import { ChiefWardenManagePage } from '@/pages/warden/ChiefWardenManagePage';
+import { PresenceDashboardPage } from '@/pages/warden/PresenceDashboardPage';
 import { GuardDashboard } from '@/pages/guard/GuardDashboard';
 import { AdminDashboard } from '@/pages/admin/AdminDashboard';
 import { AcademicHolidaysPage } from '@/pages/academic/AcademicHolidaysPage';
@@ -118,6 +119,7 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={[UserRole.WARDEN]} />}>
             <Route element={<DashboardLayout />}>
               <Route path="/warden/dashboard" element={<WardenDashboard />} />
+              <Route path="/warden/presence" element={<PresenceDashboardPage />} />
               <Route path="/warden/approvals" element={<PendingApprovalsPage />} />
               <Route path="/warden/leaves" element={<AllLeavesPage />} />
               <Route path="/warden/leaves/:id" element={<LeaveDetailPage />} />
@@ -132,6 +134,7 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={[UserRole.CHIEF_WARDEN]} />}>
             <Route element={<DashboardLayout />}>
               <Route path="/chief-warden/dashboard" element={<WardenDashboard />} />
+              <Route path="/chief-warden/presence" element={<PresenceDashboardPage />} />
               <Route path="/chief-warden/approvals" element={<PendingApprovalsPage />} />
               <Route path="/chief-warden/leaves" element={<AllLeavesPage />} />
               <Route path="/chief-warden/leaves/:id" element={<LeaveDetailPage />} />
@@ -146,7 +149,7 @@ export default function App() {
 
           {/* ─── Shared: Student & Hostel Management (Admin + Chief Warden + Warden) ── */}
            {/* Warden access is hostel-scoped server-side; the UI is role-filtered. */}
-           <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.CHIEF_WARDEN, UserRole.WARDEN]} />}>
+           <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.DIRECTOR, UserRole.CHIEF_WARDEN, UserRole.WARDEN]} />}>
              <Route element={<DashboardLayout />}>
               <Route path="/admin/students" element={<StudentsListPage />} />
               <Route path="/admin/students/:id" element={<StudentDetailPage />} />
@@ -187,6 +190,7 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]} />}>
             <Route element={<DashboardLayout />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/presence" element={<PresenceDashboardPage />} />
               <Route path="/admin/students/register" element={<RegisterStudentPage />} />
               <Route path="/admin/departments" element={<DepartmentsPage />} />
               <Route path="/admin/courses" element={<CoursesPage />} />
@@ -204,6 +208,7 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={[UserRole.DIRECTOR]} />}>
             <Route element={<DashboardLayout />}>
               <Route path="/director/dashboard" element={<AdminDashboard />} />
+              <Route path="/director/presence" element={<PresenceDashboardPage />} />
               <Route path="/director/leaves" element={<AllLeavesPage />} />
               <Route path="/director/holidays" element={<AcademicHolidaysPage />} />
               <Route path="/director/reports" element={<ReportsPage />} />

@@ -13,6 +13,7 @@ const VIEW_ROLES = [
   UserRole.WARDEN,
   UserRole.CHIEF_WARDEN,
   UserRole.ADMIN,
+  UserRole.DIRECTOR,
   UserRole.GUARD,
 ] as const;
 // Wardens may create hostel-specific entries; scope is enforced in the service.

@@ -1,0 +1,438 @@
+/**
+ * Presence Dashboard Page Styles
+ */
+
+.presence-page {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* ─── Header Section (Header + Controls Horizontal) ────────────────── */
+.presence-page__header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.presence-page__header {
+  flex: 1;
+  min-width: 250px;
+}
+
+.presence-page__title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  margin: 0;
+}
+
+.presence-page__subtitle {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin: var(--space-2) 0 0;
+}
+
+/* ─── Error Banner ──────────────────────────────────────────────── */
+.presence-page__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  background-color: var(--color-red-50);
+  border: 1px solid var(--color-red-200);
+  border-radius: var(--radius-md);
+  color: var(--color-red-700);
+  font-size: var(--font-size-sm);
+}
+
+.presence-page__error button {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: var(--font-size-lg);
+  padding: 0;
+}
+
+/* ─── Controls ──────────────────────────────────────────────────── */
+.presence-page__controls {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-end;
+  flex-wrap: wrap;
+  min-width: 300px;
+}
+
+.presence-page__control-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.presence-page__control-group label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.input--sm,
+.input--md {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  transition: border-color 0.2s;
+}
+
+.input--sm:focus,
+.input--md:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+/* ─── Metrics Grid ──────────────────────────────────────────────── */
+.presence-page__metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.metric-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.metric-card__icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.metric-card__content {
+  flex: 1;
+}
+
+.metric-card__value {
+  font-size: 1.75rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.metric-card__label {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ─── Hostel Statistics ─────────────────────────────────────────── */
+.presence-page__hostel-stats {
+  margin-bottom: var(--space-6);
+}
+
+.presence-page__hostel-stats h2 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 var(--space-4);
+}
+
+.presence-page__hostel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-4);
+}
+
+.hostel-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hostel-stat-card h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.hostel-stat-card__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+}
+
+.hostel-stat-card__row span {
+  color: var(--text-secondary);
+}
+
+.hostel-stat-card__row strong {
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+/* ─── Tabs Section ──────────────────────────────────────────────── */
+.presence-page__tabs-section {
+  margin-top: var(--space-6);
+}
+
+.presence-page__tabs {
+  display: flex;
+  gap: var(--space-2);
+  border-bottom: 2px solid var(--color-border);
+  overflow-x: auto;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.presence-page__tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.presence-page__tab:hover {
+  color: var(--text-primary);
+  background-color: var(--color-gray-50);
+}
+
+.presence-page__tab--active {
+  color: var(--color-primary-600);
+  border-bottom-color: var(--color-primary-600);
+}
+
+.presence-page__tab-icon {
+  font-size: 1.25rem;
+}
+
+.presence-page__tab-label {
+  font-size: var(--font-size-sm);
+}
+
+/* ─── Tab Content ───────────────────────────────────────────────── */
+.presence-page__tab-content {
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.presence-page__tab-header {
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.presence-page__tab-header h2 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.presence-page__tab-header p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.presence-page__search {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.presence-page__search .input--md {
+  min-width: 250px;
+}
+
+/* ─── Table ─────────────────────────────────────────────────────── */
+.presence-page__table-container {
+  overflow-x: auto;
+}
+
+.presence-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.presence-table thead {
+  background-color: var(--color-gray-50);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.presence-table th {
+  padding: var(--space-3);
+  text-align: left;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.presence-table tbody tr {
+  border-bottom: 1px solid var(--color-border);
+  transition: background-color 0.2s;
+}
+
+.presence-table tbody tr:hover {
+  background-color: var(--color-gray-50);
+}
+
+.presence-table td {
+  padding: var(--space-3);
+  color: var(--text-primary);
+}
+
+/* ─── Status Badge ──────────────────────────────────────────────── */
+.status {
+  display: inline-block;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.status--success {
+  background-color: var(--color-green-100);
+  color: var(--color-green-700);
+}
+
+.status--warning {
+  background-color: var(--color-yellow-100);
+  color: var(--color-yellow-700);
+}
+
+.status--danger {
+  background-color: var(--color-red-100);
+  color: var(--color-red-700);
+}
+
+.status--neutral {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-700);
+}
+
+/* ─── Empty State ───────────────────────────────────────────────── */
+.presence-page__empty {
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
+}
+
+/* ─── Pagination ────────────────────────────────────────────────── */
+.presence-page__pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-gray-50);
+}
+
+.presence-page__pagination span {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* ─── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .presence-page__header-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .presence-page__controls {
+    flex-direction: column;
+    width: 100%;
+    min-width: auto;
+  }
+
+  .presence-page__control-group {
+    width: 100%;
+  }
+
+  .presence-page__metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .presence-page__hostel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .presence-page__tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .presence-page__search {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .presence-page__search .input--md {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .presence-table {
+    font-size: var(--font-size-xs);
+  }
+
+  .presence-table th,
+  .presence-table td {
+    padding: var(--space-2);
+  }
+}
+
+@media (max-width: 480px) {
+  .presence-page__metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .presence-page__tabs {
+    gap: 0;
+    padding-bottom: var(--space-2);
+  }
+
+  .presence-page__tab {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .presence-page__tab-label {
+    display: none;
+  }
+
+  .metric-card {
+    gap: var(--space-2);
+  }
+
+  .metric-card__value {
+    font-size: 1.5rem;
+  }
+}

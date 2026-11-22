@@ -29,6 +29,7 @@ import adminRoutes from './modules/admin/admin.routes';
 import reportRoutes from './modules/reports/reports.routes';
 import academicHolidayRoutes from './modules/academicHoliday/academicHoliday.routes';
 import absenceRoutes from './modules/absence/absence.routes';
+import presenceRoutes from './modules/presence/presence.routes';
 
 const app = express();
 
@@ -98,6 +99,7 @@ app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/academic-holidays', academicHolidayRoutes);
 app.use('/api/v1/absence', absenceRoutes);
+app.use('/api/v1/presence', presenceRoutes);
 
 // ─── Error Handling ──────────────────────────────────────────────────────────
 
