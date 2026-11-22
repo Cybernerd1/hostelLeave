@@ -13,6 +13,7 @@ export function HostelsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const canManage = user?.role === 'admin' || user?.role === 'chief_warden';
+  const canEdit = canManage || user?.role === 'warden';
   const [hostels, setHostels] = useState<HostelRecord[]>([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -66,7 +67,7 @@ export function HostelsPage() {
         {canManage && <button className="btn btn--primary" onClick={() => { setForm(emptyForm); setEditingId(null); setFormOpen(true); }}>+ Create Hostel</button>}
       </div>
 
-      {formOpen && canManage && (
+      {formOpen && canEdit && (
         <Card variant="default" padding="lg">
           <form onSubmit={saveHostel}>
             <h2 style={{ marginTop: 0 }}>{editingId ? 'Edit Hostel' : 'Create Hostel'}</h2>
@@ -98,7 +99,7 @@ export function HostelsPage() {
               <td><div className="cell-primary">{hostel.name}</div><div className="cell-secondary">{hostel.type} · {hostel.studentsPerRoom} per room</div></td>
               <td>{hostel.totalRooms}</td><td>{hostel.capacity}</td><td>{hostel.occupiedSeats}</td><td>{hostel.availableSeats}</td><td>{hostel.occupancyPercentage}%</td>
               <td><span className={`status-badge status-badge--${hostel.isActive ? 'approved' : 'rejected'}`}>{hostel.isActive ? 'Active' : 'Inactive'}</span></td>
-              <td><button className="btn-action btn-action--view" onClick={() => navigate(`/admin/hostels/${hostel._id}/rooms`)}>View rooms</button>{canManage && <><button className="btn-action btn-action--view" style={{ marginLeft: 6 }} onClick={() => { setEditingId(hostel._id); setForm({ name: hostel.name, type: hostel.type, totalRooms: hostel.totalRooms, studentsPerRoom: hostel.studentsPerRoom || 1 }); setFormOpen(true); }}>Edit</button><button className="btn-action btn-action--view" style={{ marginLeft: 6 }} onClick={async () => { try { const updated = await adminApi.updateHostel(hostel._id, { isActive: !hostel.isActive }); setHostels((current) => current.map((item) => item._id === hostel._id ? updated : item)); success(`Hostel marked ${updated.isActive ? 'available' : 'unavailable'}.`); } catch { showError('Unable to change hostel status.'); } }}>{hostel.isActive ? 'Mark unavailable' : 'Mark available'}</button><button className="btn-action btn-action--view" style={{ marginLeft: 6 }} onClick={() => deleteHostel(hostel)}>Delete</button></>}</td>
+              <td><button className="btn-action btn-action--view" onClick={() => navigate(`/admin/hostels/${hostel._id}/rooms`)}>View rooms</button>{canEdit && <><button className="btn-action btn-action--view" style={{ marginLeft: 6 }} onClick={() => { setEditingId(hostel._id); setForm({ name: hostel.name, type: hostel.type, totalRooms: hostel.totalRooms, studentsPerRoom: hostel.studentsPerRoom || 1 }); setFormOpen(true); }}>Edit</button><button className="btn-action btn-action--view" style={{ marginLeft: 6 }} onClick={async () => { try { const updated = await adminApi.updateHostel(hostel._id, { isActive: !hostel.isActive }); setHostels((current) => current.map((item) => item._id === hostel._id ? updated : item)); success(`Hostel marked ${updated.isActive ? 'available' : 'unavailable'}.`); } catch { showError('Unable to change hostel status.'); } }}>{hostel.isActive ? 'Mark unavailable' : 'Mark available'}</button></>}{canManage && <button className="btn-action btn-action--view" style={{ marginLeft: 6 }} onClick={() => deleteHostel(hostel)}>Delete</button>}</td>
             </tr>)}</tbody>
           </table></div>
         )}

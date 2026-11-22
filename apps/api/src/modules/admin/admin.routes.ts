@@ -38,9 +38,11 @@ import { UserRole } from '@hostel/shared-types';
 const router = Router();
 
 const ADMIN_ROLES = [UserRole.ADMIN] as const;
-const MANAGE_STUDENT_ROLES = [UserRole.ADMIN, UserRole.CHIEF_WARDEN] as const;
+const MANAGE_STUDENT_ROLES = [UserRole.ADMIN, UserRole.CHIEF_WARDEN, UserRole.WARDEN] as const;
 const CHIEF_WARDEN_ROLES = [UserRole.ADMIN, UserRole.CHIEF_WARDEN] as const;
 const STAFF_ROLES = [UserRole.ADMIN, UserRole.CHIEF_WARDEN, UserRole.WARDEN] as const;
+// Roles allowed to view/hostel-manage students, hostels and rooms (scoped by service).
+const HOSTEL_VIEW_ROLES = [UserRole.ADMIN, UserRole.CHIEF_WARDEN, UserRole.WARDEN] as const;
 
 // All admin routes use optional auth; public endpoints (optionalAuth) allow unauthenticated access.
 // Protected routes are guarded by authorize() which checks req.user.
@@ -59,14 +61,14 @@ router.post('/students/import', authorize(...STAFF_ROLES), adminController.impor
 router.get('/students/import/template/csv', authorize(...STAFF_ROLES), adminController.downloadCsvTemplate);
 router.get('/students/import/template/excel', authorize(...STAFF_ROLES), adminController.downloadExcelTemplate);
 
-// Students (read + assign-parent available to Admin and Chief Warden)
+// Students (read + assign-parent available to Admin, Chief Warden and Warden; scoped)
 router.post('/students', authorize(...ADMIN_ROLES), validateBody(createStudentSchema), adminController.createStudent);
 router.get('/students', authorize(...MANAGE_STUDENT_ROLES), adminController.getStudents);
 router.get('/students/allocation-candidates', authorize(...CHIEF_WARDEN_ROLES), adminController.getAllocationCandidates);
 router.get('/students/:id', authorize(...MANAGE_STUDENT_ROLES), adminController.getStudentById);
 router.put('/students/:id/assign-parent', authorize(...MANAGE_STUDENT_ROLES), adminController.assignParent);
 router.put('/students/:id/assign-hostel', authorize(...CHIEF_WARDEN_ROLES), adminController.assignHostelToStudent);
-router.put('/students/:id', authorize(...ADMIN_ROLES), validateBody(updateStudentSchema), adminController.updateStudent);
+router.put('/students/:id', authorize(...MANAGE_STUDENT_ROLES), validateBody(updateStudentSchema), adminController.updateStudent);
 router.delete('/students/:id', authorize(...ADMIN_ROLES), adminController.deleteStudent);
 
 // ─── Application Approval Workflow ──────────────────────────────────────
@@ -83,6 +85,7 @@ router.delete('/students/:id/room', authorize(...STAFF_ROLES), adminController.r
 // ─── Registration Form Management ───────────────────────────────────────
 router.post('/registration-forms', authorize(...STAFF_ROLES), validateBody(createRegistrationFormSchema), adminController.createRegistrationForm);
 router.get('/registration-forms', authorize(...STAFF_ROLES), adminController.getRegistrationForms);
+router.get('/registration-forms/:id', authorize(...STAFF_ROLES), adminController.getRegistrationFormById);
 router.put('/registration-forms/:id', authorize(...STAFF_ROLES), validateBody(updateRegistrationFormSchema), adminController.updateRegistrationForm);
 
 // ─── Public Registration (no auth required) ─────────────────────────────
@@ -91,7 +94,7 @@ router.post('/registration-forms/:token/submit', optionalAuth, validateBody(publ
 
 // Parents
 router.post('/parents', authorize(...ADMIN_ROLES), validateBody(createParentSchema), adminController.createParent);
-router.get('/parents', authorize(...MANAGE_STUDENT_ROLES), adminController.getParents);
+router.get('/parents', authorize(...HOSTEL_VIEW_ROLES), adminController.getParents);
 router.put('/parents/:id', authorize(...ADMIN_ROLES), validateBody(updateParentSchema), adminController.updateParent);
 
 // Departments
@@ -108,18 +111,18 @@ router.delete('/courses/:id', authorize(...ADMIN_ROLES), adminController.deleteC
 
 // Hostels
 router.post('/hostels', authorize(...CHIEF_WARDEN_ROLES), validateBody(createHostelSchema), adminController.createHostel);
-router.get('/hostels', authorize(...MANAGE_STUDENT_ROLES), adminController.getHostels);
+router.get('/hostels', authorize(...HOSTEL_VIEW_ROLES), adminController.getHostels);
 router.get('/hostels/available', authorize(...STAFF_ROLES), adminController.getAvailableHostels);
 router.get('/hostels/:id/rooms', authorize(...STAFF_ROLES), adminController.getHostelRooms);
 router.get('/hostels/:id/available-rooms', authorize(...STAFF_ROLES), adminController.getAvailableRooms);
-router.put('/hostels/:id', authorize(...CHIEF_WARDEN_ROLES), validateBody(updateHostelSchema), adminController.updateHostel);
+router.put('/hostels/:id', authorize(...STAFF_ROLES), validateBody(updateHostelSchema), adminController.updateHostel);
 router.delete('/hostels/:id', authorize(...CHIEF_WARDEN_ROLES), adminController.deleteHostel);
 
-// Rooms
-router.post('/rooms', authorize(...CHIEF_WARDEN_ROLES), validateBody(createRoomSchema), adminController.createRoom);
-router.get('/rooms', authorize(...MANAGE_STUDENT_ROLES), adminController.getRooms);
-router.put('/rooms/:id', authorize(...CHIEF_WARDEN_ROLES), validateBody(updateRoomSchema), adminController.updateRoom);
-router.delete('/rooms/:id', authorize(...CHIEF_WARDEN_ROLES), adminController.deleteRoom);
+// Rooms (wardens may manage rooms within their assigned hostel — enforced in service)
+router.post('/rooms', authorize(...STAFF_ROLES), validateBody(createRoomSchema), adminController.createRoom);
+router.get('/rooms', authorize(...HOSTEL_VIEW_ROLES), adminController.getRooms);
+router.put('/rooms/:id', authorize(...STAFF_ROLES), validateBody(updateRoomSchema), adminController.updateRoom);
+router.delete('/rooms/:id', authorize(...STAFF_ROLES), adminController.deleteRoom);
 
 // Staff
 router.post('/staff', authorize(...ADMIN_ROLES), validateBody(createStaffSchema), adminController.createStaff);

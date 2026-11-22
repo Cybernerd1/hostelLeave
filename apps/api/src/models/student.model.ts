@@ -7,7 +7,7 @@
 
 import mongoose, { Schema, type Document } from 'mongoose';
 
-import { Gender } from '@hostel/shared-types';
+import { Gender, PresenceStatus } from '@hostel/shared-types';
 
 export interface IStudentDocument extends Document {
   _id: mongoose.Types.ObjectId;
@@ -51,6 +51,8 @@ export interface IStudentDocument extends Document {
   allocationStatus: 'none' | 'active' | 'transferred' | 'ended';
   allocatedAt?: Date;
   allocatedBy?: mongoose.Types.ObjectId;
+  /** Physical presence within the hostel; updated on gate exit/entry. */
+  presenceStatus: PresenceStatus;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -175,6 +177,12 @@ const studentSchema = new Schema<IStudentDocument>(
     },
     allocatedAt: { type: Date },
     allocatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    presenceStatus: {
+      type: String,
+      enum: Object.values(PresenceStatus),
+      default: PresenceStatus.IN_HOSTEL,
+      index: true,
+    },
     isActive: {
       type: Boolean,
       default: true,

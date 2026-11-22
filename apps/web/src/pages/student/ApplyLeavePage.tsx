@@ -20,6 +20,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
+import { leaveApi } from '@/services/leave.service';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
 import './ApplyLeavePage.css';
 
@@ -88,7 +89,33 @@ export function ApplyLeavePage() {
   const [success, setSuccess]           = useState(false);
   const [leaveId, setLeaveId]           = useState('');
 
+  // Live calendar preview
+  const [preview, setPreview] = useState<{ workingDays: number; holidays: number; vacationDays: number; weekendDays: number; total: number } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   const days = calcDays(fromDate, toDate);
+
+  // Live academic-calendar preview for the selected range.
+  useEffect(() => {
+    if (!fromDate || !toDate || days < 1) { setPreview(null); return; }
+    let cancelled = false;
+    setPreviewLoading(true);
+    leaveApi.classifyDates(fromDate, toDate)
+      .then((result) => {
+        if (!cancelled) {
+          setPreview({
+            total: result.total,
+            workingDays: result.workingDays,
+            holidays: result.holidays,
+            vacationDays: result.vacationDays,
+            weekendDays: result.weekendDays,
+          });
+        }
+      })
+      .catch(() => { if (!cancelled) setPreview(null); })
+      .finally(() => { if (!cancelled) setPreviewLoading(false); });
+    return () => { cancelled = true; };
+  }, [fromDate, toDate, days]);
 
   // Load student profile
   useEffect(() => {
@@ -310,6 +337,19 @@ export function ApplyLeavePage() {
               <div className="apply-leave__days-badge">{days > 0 ? days : '—'}</div>
             </div>
           </div>
+          {preview && (
+            <div className="apply-leave__preview" style={{ marginTop: 12 }}>
+              <h3>Academic Calendar Preview</h3>
+              <div className="apply-leave__preview-grid">
+                <div><span>Total Days</span><strong>{preview.total}</strong></div>
+                <div><span>Working Days</span><strong>{preview.workingDays}</strong></div>
+                <div><span>Holidays</span><strong>{preview.holidays}</strong></div>
+                <div><span>Weekend</span><strong>{preview.weekendDays}</strong></div>
+                <div><span>Vacation</span><strong>{preview.vacationDays}</strong></div>
+              </div>
+            </div>
+          )}
+          {previewLoading && <p className="apply-leave__char-count" style={{ marginTop: 8 }}>Checking academic calendar…</p>}
         </div>
 
         <div className="apply-leave__section">

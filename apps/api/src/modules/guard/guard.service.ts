@@ -1,20 +1,23 @@
 /**
  * Guard Service
  *
- * Handles QR verification, exit/entry marking for gate operations.
+ * Handles QR verification and gate operations (exit / return). Exit and
+ * return are recorded against the generated Gate Pass (the authoritative
+ * movement record) and mirrored into a GuardLog for the audit trail.
  */
 
-import { GuardAction, LeaveStatus, NotificationType } from '@hostel/shared-types';
+import { GuardAction, LeaveStatus, NotificationType, GatePassStatus } from '@hostel/shared-types';
 
 import { LeaveRequest } from '../../models/leaveRequest.model';
 import { GuardLog } from '../../models/guardLog.model';
 import { Student } from '../../models/student.model';
-import { User } from '../../models/user.model';
+import { Parent } from '../../models/parent.model';
 import { AppError } from '../../utils/AppError';
 import { logger } from '../../utils/logger';
 import { createAuditLog } from '../../middleware/audit.middleware';
 import { notificationService } from '../notification/notification.service';
 import { qrService } from '../qr/qr.service';
+import { gatePassService, serializePass } from './gatePass.service';
 import { buildPaginationMeta } from '../../utils/response.util';
 
 import type { PaginationMeta } from '@hostel/shared-types';
@@ -29,7 +32,75 @@ export class GuardService {
   }
 
   /**
-   * Mark student exit.
+   * Look up a leave/gate pass for the scan screen by leave id or gate pass
+   * number. Returns the leave details plus any existing gate pass state so the
+   * guard knows whether to offer Exit or Return.
+   */
+  async lookupPass(identifier: string) {
+    const trimmed = identifier.trim();
+    const studentPopulate = {
+      path: 'studentId',
+      select: 'name rollNumber phone year semester hostelId roomId',
+      populate: [
+        { path: 'hostelId', select: 'name' },
+        { path: 'roomId', select: 'roomNumber' },
+      ],
+    };
+
+    let leave: Record<string, unknown> | null = null;
+    let gatePass = null;
+
+    // 1. Gate pass number (or gate pass Mongo id).
+    const passByNumber = await gatePassService.findByIdentifier(trimmed);
+    if (passByNumber) {
+      gatePass = passByNumber;
+      leave = await LeaveRequest.findById(passByNumber.leaveRequestId)
+        .populate(studentPopulate)
+        .lean() as unknown as Record<string, unknown> | null;
+    }
+
+    // 2. Leave id (human-readable or Mongo id).
+    if (!leave) {
+      leave = await LeaveRequest.findOne(
+        trimmed.match(/^[a-f\d]{24}$/i) ? { _id: trimmed } : { leaveId: trimmed },
+      )
+        .populate(studentPopulate)
+        .lean() as unknown as Record<string, unknown> | null;
+      if (leave) {
+        gatePass = await gatePassService.getByLeaveId(String(leave._id));
+      }
+    }
+
+    // 3. Student roll number: show their latest approved/active leave.
+    if (!leave) {
+      const student = await Student.findOne({ rollNumber: trimmed }).select('_id').lean();
+      if (student) {
+        leave = await LeaveRequest.findOne({
+          studentId: student._id,
+          status: { $in: [LeaveStatus.APPROVED, LeaveStatus.COMPLETED] },
+        })
+          .sort({ createdAt: -1 })
+          .populate(studentPopulate)
+          .lean() as unknown as Record<string, unknown> | null;
+        if (leave) {
+          gatePass = await gatePassService.getByLeaveId(String(leave._id));
+        }
+      }
+    }
+
+    if (!leave) {
+      throw AppError.notFound('Leave pass not found');
+    }
+
+    return {
+      leave,
+      gatePass: gatePass ? serializePass(gatePass) : null,
+    };
+  }
+
+  /**
+   * Mark student exit. Delegates to the gate pass (atomic APPROVED →
+   * OUT_OF_HOSTEL) and writes a guard log + notification.
    */
   async markExit(
     guardId: string,
@@ -42,27 +113,32 @@ export class GuardService {
       throw AppError.notFound('Leave request not found');
     }
 
-    if (leaveRequest.status !== LeaveStatus.APPROVED) {
-      throw AppError.badRequest('Leave is not approved');
+    if (leaveRequest.status !== LeaveStatus.APPROVED && leaveRequest.status !== LeaveStatus.COMPLETED) {
+      throw AppError.badRequest('Leave is not approved; exit cannot be recorded');
     }
 
-    if (leaveRequest.exitTime) {
-      throw AppError.badRequest('Exit has already been marked for this leave');
+    // Ensure a gate pass exists (should already exist from approval; create if
+    // missing for legacy approved leaves).
+    let pass = await gatePassService.getByLeaveId(leaveRequest._id.toString());
+    if (!pass) {
+      pass = await gatePassService.generateForLeave(leaveRequest._id.toString());
+    }
+    if (!pass) {
+      throw AppError.badRequest('Gate pass is not available for this leave');
     }
 
-    // Check if leave dates are valid
+    if (pass.status === GatePassStatus.RETURNED || pass.actualExitTime) {
+      throw AppError.badRequest('Exit has already been recorded for this leave');
+    }
+
+    // Prevent exit before the leave start day (institution-local calendar day).
     const now = new Date();
-    const fromDate = new Date(leaveRequest.fromDate);
-    fromDate.setHours(0, 0, 0, 0);
-
-    if (now < fromDate) {
+    const fromKey = new Date(leaveRequest.fromDate).toISOString().slice(0, 10);
+    if (now.toISOString().slice(0, 10) < fromKey) {
       throw AppError.badRequest('Leave period has not started yet');
     }
 
-    // Mark exit
-    leaveRequest.exitTime = now;
-    leaveRequest.exitGuardId = guardId as unknown as typeof leaveRequest.exitGuardId;
-    await leaveRequest.save();
+    const updatedPass = await gatePassService.recordExit(pass, guardId, remarks);
 
     // Create guard log
     const guardLog = await GuardLog.create({
@@ -81,7 +157,7 @@ export class GuardService {
       await notificationService.create({
         userId: student.userId.toString(),
         title: 'Gate Exit Recorded',
-        message: `Your exit has been recorded for leave ${leaveRequest.leaveId}.`,
+        message: `Your exit has been recorded for leave ${leaveRequest.leaveId}. Gate pass ${updatedPass.gatePassNumber}.`,
         type: NotificationType.GATE_EXIT,
         referenceId: leaveRequest._id.toString(),
         referenceModel: 'LeaveRequest',
@@ -93,7 +169,7 @@ export class GuardService {
       action: 'scan',
       entity: 'GuardLog',
       entityId: guardLog._id.toString(),
-      description: `Exit marked for leave ${leaveRequest.leaveId}`,
+      description: `Exit marked for leave ${leaveRequest.leaveId} (gate pass ${updatedPass.gatePassNumber})`,
     });
 
     logger.info(`Exit marked for leave ${leaveRequest.leaveId} by guard ${guardId}`);
@@ -102,7 +178,8 @@ export class GuardService {
   }
 
   /**
-   * Mark student entry (return).
+   * Mark student entry (return). Delegates to the gate pass (atomic
+   * OUT_OF_HOSTEL → RETURNED), requires a recorded exit, and completes the leave.
    */
   async markEntry(
     guardId: string,
@@ -115,21 +192,19 @@ export class GuardService {
       throw AppError.notFound('Leave request not found');
     }
 
-    if (!leaveRequest.exitTime) {
-      throw AppError.badRequest('Exit has not been marked yet');
+    const pass = await gatePassService.getByLeaveId(leaveRequest._id.toString());
+    if (!pass) {
+      throw AppError.badRequest('No gate pass found for this leave; cannot record a return');
     }
-
-    if (leaveRequest.entryTime) {
-      throw AppError.badRequest('Entry has already been marked for this leave');
+    if (!pass.actualExitTime) {
+      throw AppError.badRequest('Exit has not been recorded yet; cannot record a return');
+    }
+    if (pass.actualReturnTime) {
+      throw AppError.badRequest('Return has already been recorded for this leave');
     }
 
     const now = new Date();
-
-    // Mark entry and complete the leave
-    leaveRequest.entryTime = now;
-    leaveRequest.entryGuardId = guardId as unknown as typeof leaveRequest.entryGuardId;
-    leaveRequest.status = LeaveStatus.COMPLETED;
-    await leaveRequest.save();
+    const updatedPass = await gatePassService.recordReturn(pass, guardId, remarks);
 
     // Create guard log
     const guardLog = await GuardLog.create({
@@ -148,11 +223,26 @@ export class GuardService {
       await notificationService.create({
         userId: student.userId.toString(),
         title: 'Welcome Back',
-        message: `Your entry has been recorded. Leave ${leaveRequest.leaveId} is now completed.`,
+        message: `Your return has been recorded. Leave ${leaveRequest.leaveId} is now completed. Gate pass ${updatedPass.gatePassNumber}.`,
         type: NotificationType.GATE_ENTRY,
         referenceId: leaveRequest._id.toString(),
         referenceModel: 'LeaveRequest',
       });
+
+      // Notify parent/guardian if present.
+      if (student.parentId) {
+        const parent = await Parent.findById(student.parentId);
+        if (parent?.userId) {
+          await notificationService.create({
+            userId: parent.userId.toString(),
+            title: 'Ward Returned',
+            message: `${student.name} has returned to the hostel (leave ${leaveRequest.leaveId}).`,
+            type: NotificationType.GATE_ENTRY,
+            referenceId: leaveRequest._id.toString(),
+            referenceModel: 'LeaveRequest',
+          });
+        }
+      }
     }
 
     await createAuditLog({
@@ -160,7 +250,7 @@ export class GuardService {
       action: 'scan',
       entity: 'GuardLog',
       entityId: guardLog._id.toString(),
-      description: `Entry marked for leave ${leaveRequest.leaveId}. Leave completed.`,
+      description: `Entry marked for leave ${leaveRequest.leaveId} (gate pass ${updatedPass.gatePassNumber}). Leave completed.`,
     });
 
     logger.info(`Entry marked for leave ${leaveRequest.leaveId}. Leave completed.`);

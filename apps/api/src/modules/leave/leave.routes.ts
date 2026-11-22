@@ -49,6 +49,7 @@ const ALL_LEAVES_ROLES = [
   UserRole.ADMIN,
   UserRole.WARDEN,
   UserRole.CHIEF_WARDEN,
+  UserRole.PARENT,
 ];
 
 

@@ -21,6 +21,10 @@ interface LeavePassInfo {
   leaveType: string;
   hostel: string;
   room: string;
+  gatePassNumber?: string;
+  gatePassStatus?: string;
+  actualExitTime?: string;
+  actualReturnTime?: string;
 }
 
 export function QRScanPage() {
@@ -28,33 +32,43 @@ export function QRScanPage() {
   const [manualId, setManualId] = useState('');
   const [leaveInfo, setLeaveInfo] = useState<LeavePassInfo | null>(null);
   const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<'exit' | 'return' | null>(null);
 
   const lookupLeave = useCallback(async (id: string) => {
     if (!id.trim()) return;
     setLoading(true);
-    setLeaveInfo(null);
     try {
-      // The human-readable leave ID (LV-...) only works on the public lookup route.
-      // GET /leaves/:id expects a MongoDB _id and fails with 400 for LV-... IDs.
+      // Look up via the authenticated guard lookup route so we also receive the
+      // gate pass state (exit/return availability).
       const res = await api.get<{ success: boolean; data: Record<string, unknown> }>(
-        `/leaves/public/${encodeURIComponent(id.trim())}`,
+        `/guard/lookup/${encodeURIComponent(id.trim())}`,
       );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const d = res.data.data as any;
-      // The public route returns the populated student under `student` (not `studentId`).
-      const st = d.student;
+      const leave = d.leave;
+      const gatePass = d.gatePass;
+      if (!leave) {
+        setLeaveInfo(null);
+        showError('Leave pass not found. Check the Leave ID.');
+        return;
+      }
+      const st = leave.studentId ?? {};
       setLeaveInfo({
-        _id: d._id,
-        leaveId: d.leaveId,
-        status: d.status,
-        studentName: st?.name ?? 'Unknown',
-        rollNumber: st?.rollNumber ?? '—',
-        fromDate: d.fromDate,
-        toDate: d.toDate,
-        destination: d.destination,
-        leaveType: d.leaveType,
-        hostel: st?.hostelId?.name ?? '—',
-        room: st?.roomId?.roomNumber ?? '—',
+        _id: leave._id,
+        leaveId: leave.leaveId,
+        status: leave.status,
+        studentName: st.name ?? 'Unknown',
+        rollNumber: st.rollNumber ?? '—',
+        fromDate: leave.fromDate,
+        toDate: leave.toDate,
+        destination: leave.destination,
+        leaveType: leave.leaveType,
+        hostel: st.hostelId?.name ?? '—',
+        room: st.roomId?.roomNumber ?? '—',
+        gatePassNumber: gatePass?.gatePassNumber,
+        gatePassStatus: gatePass?.status,
+        actualExitTime: gatePass?.actualExitTime,
+        actualReturnTime: gatePass?.actualReturnTime,
       });
     } catch (err) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,28 +91,44 @@ export function QRScanPage() {
 
   const handleRecordExit = async () => {
     if (!leaveInfo) return;
+    setActionLoading('exit');
     try {
-      await api.post(`/guard/scan`, { leaveId: leaveInfo._id, action: 'exit' });
+      await api.post(`/guard/scan`, { leaveRequestId: leaveInfo._id, action: 'exit' });
       success('Exit recorded successfully.');
-    } catch {
-      showError('Could not record exit at this time.');
+      await lookupLeave(leaveInfo.leaveId);
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      showError(msg || 'Could not record exit at this time.');
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleRecordReturn = async () => {
     if (!leaveInfo) return;
+    setActionLoading('return');
     try {
-      await api.post(`/guard/scan`, { leaveId: leaveInfo._id, action: 'return' });
+      await api.post(`/guard/scan`, { leaveRequestId: leaveInfo._id, action: 'entry' });
       success('Return recorded successfully.');
-    } catch {
-      showError('Could not record return at this time.');
+      await lookupLeave(leaveInfo.leaveId);
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      showError(msg || 'Could not record return at this time.');
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-  const STATUS_OK = ['approved', 'active'];
-  const isValid = leaveInfo && STATUS_OK.includes(leaveInfo.status);
+  // A pass is valid for gate action when the leave is approved (or already
+  // completed after a return) and a gate pass exists.
+  const STATUS_OK = ['approved', 'completed'];
+  const isValid = !!leaveInfo && STATUS_OK.includes(leaveInfo.status);
+  // Exit is available only when the student has not yet exited.
+  const canExit = isValid && leaveInfo?.gatePassStatus === 'approved' && !leaveInfo?.actualExitTime;
+  // Return is available only after an exit and before a return.
+  const canReturn = isValid && !!leaveInfo?.actualExitTime && !leaveInfo?.actualReturnTime;
 
   return (
     <div className="guard-page animate-fade-in-up">
@@ -144,11 +174,24 @@ export function QRScanPage() {
                   {leaveInfo.status.replace(/_/g, ' ')}
                 </span>
               </div>
+              {leaveInfo.gatePassNumber && (
+                <div className="pass-row"><span className="pass-label">Gate Pass</span><span className="pass-value">{leaveInfo.gatePassNumber}</span></div>
+              )}
+              {leaveInfo.actualExitTime && (
+                <div className="pass-row"><span className="pass-label">Exited</span><span className="pass-value">{formatDate(leaveInfo.actualExitTime)}</span></div>
+              )}
+              {leaveInfo.actualReturnTime && (
+                <div className="pass-row"><span className="pass-label">Returned</span><span className="pass-value">{formatDate(leaveInfo.actualReturnTime)}</span></div>
+              )}
             </div>
             {isValid && (
               <div className="pass-actions" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-                <button className="btn btn--success" onClick={handleRecordExit}>Record Exit</button>
-                <button className="btn btn--secondary" onClick={handleRecordReturn}>Record Return</button>
+                <button className="btn btn--success" onClick={handleRecordExit} disabled={!canExit || actionLoading !== null}>
+                  {actionLoading === 'exit' ? 'Recording…' : 'Record Exit'}
+                </button>
+                <button className="btn btn--secondary" onClick={handleRecordReturn} disabled={!canReturn || actionLoading !== null}>
+                  {actionLoading === 'return' ? 'Recording…' : 'Record Return'}
+                </button>
                 <button
                   className="btn btn--outline"
                   onClick={async () => {

@@ -12,8 +12,8 @@ import '../student/DashboardPage.css';
 
 interface GateLogEntry {
   _id: string;
-  leaveId: { _id?: string; leaveId?: string; studentId?: { name: string; rollNumber: string } };
-  action: 'exit' | 'return';
+  leaveRequestId: { _id?: string; leaveId?: string; studentId?: { name: string; rollNumber: string } };
+  action: 'exit' | 'entry';
   timestamp: string;
   guardId?: { name: string };
 }
@@ -42,7 +42,7 @@ export function GuardDashboard() {
   }, []);
 
   const exitsCount = logs.filter(l => l.action === 'exit').length;
-  const entriesCount = logs.filter(l => l.action === 'return').length;
+  const entriesCount = logs.filter(l => l.action === 'entry').length;
 
   const formatDate = (d: string) => d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
 
@@ -116,15 +116,15 @@ export function GuardDashboard() {
               </thead>
               <tbody>
                 {logs.map((l) => {
-                  const leaveIdStr = typeof l.leaveId === 'object' ? l.leaveId?._id || l.leaveId?.leaveId : l.leaveId;
-                  const displayId = typeof l.leaveId === 'object' ? l.leaveId?.leaveId : l.leaveId;
+                  const leaveIdStr = typeof l.leaveRequestId === 'object' ? l.leaveRequestId?._id || l.leaveRequestId?.leaveId : l.leaveRequestId;
+                  const displayId = typeof l.leaveRequestId === 'object' ? l.leaveRequestId?.leaveId : l.leaveRequestId;
                   return (
                     <tr key={l._id}>
                       <td className="cell-secondary">{formatDate(l.timestamp)}</td>
                       <td>
-                        <strong>{typeof l.leaveId === 'object' ? l.leaveId?.studentId?.name : 'Student'}</strong>
+                        <strong>{typeof l.leaveRequestId === 'object' ? l.leaveRequestId?.studentId?.name : 'Student'}</strong>
                         <div style={{ fontSize: '0.8rem', color: 'var(--color-neutral-500)' }}>
-                          {typeof l.leaveId === 'object' ? l.leaveId?.studentId?.rollNumber : ''}
+                          {typeof l.leaveRequestId === 'object' ? l.leaveRequestId?.studentId?.rollNumber : ''}
                         </div>
                       </td>
                       <td><code className="leave-id">{displayId || '—'}</code></td>

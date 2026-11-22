@@ -10,7 +10,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
 import { leaveApi, type LeaveRequest } from '@/services/leave.service';
-import { academicHolidayApi, type AcademicHoliday } from '@/services/academicHoliday.service';
+import { type LeaveClassification } from '@/services/academicHoliday.service';
+import { gatePassApi, type GatePass } from '@/services/gatePass.service';
 import './LeaveDetailPage.css';
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -49,13 +50,19 @@ const ROLE_LABELS: Record<string, string> = {
   admin:           'Admin',
 };
 
-/** The 4 fixed workflow stages shown in the progress tracker */
+/** The fixed workflow stages shown in the progress tracker (parent → warden → chief warden). */
 const WORKFLOW_STAGES: { role: string; label: string; status: string }[] = [
   { role: 'parent',       label: 'Parent',       status: 'pending_parent'       },
   { role: 'warden',       label: 'Warden',       status: 'pending_warden'       },
   { role: 'chief_warden', label: 'Chief Warden', status: 'pending_chief_warden' },
-  { role: 'hod',          label: 'HOD',          status: 'pending_hod'          },
 ];
+
+/**
+ * Roles whose approval is final at any pending stage. Mirrors the backend
+ * `SUPER_APPROVER_ROLES`: admin and chief warden finalize a leave regardless
+ * of which stage it is currently sitting in.
+ */
+const SUPER_APPROVER_ROLES = ['admin', 'chief_warden'];
 
 /** Roles that need approval and what leave status they act on */
 const APPROVER_REQUIRED_STATUS: Record<string, string> = {
@@ -63,9 +70,25 @@ const APPROVER_REQUIRED_STATUS: Record<string, string> = {
   warden:          'pending_warden',
   chief_warden:    'pending_chief_warden',
   hod:             'pending_hod',
-  admin:           '', // admin can act on any pending
-  director:        '',
 };
+
+const CLASSIFICATION_LABELS: Record<string, string> = {
+  working_day: 'Working day',
+  weekend: 'Weekend',
+  holiday: 'Holiday',
+  vacation: 'Vacation',
+  examination: 'Examination',
+};
+
+const GATE_PASS_STATUS_LABELS: Record<string, string> = {
+  approved: 'Approved — not yet exited',
+  out_of_hostel: 'Out of hostel',
+  returned: 'Returned',
+  overdue: 'Overdue',
+  cancelled: 'Cancelled',
+};
+
+const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function formatDate(dateStr: string | Date) {
   if (!dateStr) return '—';
@@ -120,9 +143,10 @@ export function LeaveDetailPage() {
   const [leave, setLeave] = useState<LeaveRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
-  const [holidays, setHolidays] = useState<AcademicHoliday[]>([]);
-  const [holidayLoading, setHolidayLoading] = useState(false);
-  const [holidayError, setHolidayError] = useState('');
+  const [classification, setClassification] = useState<LeaveClassification | null>(null);
+  const [classifyLoading, setClassifyLoading] = useState(false);
+  const [classifyError, setClassifyError] = useState('');
+  const [gatePass, setGatePass] = useState<GatePass | null>(null);
 
   // Approval action state
   const [actionLoading, setActionLoading] = useState(false);
@@ -149,18 +173,28 @@ export function LeaveDetailPage() {
 
   useEffect(() => { fetchLeave(); }, [fetchLeave]);
 
-  const holidayRangeStart = leave ? dateKey(leave.fromDate) : '';
-  const holidayRangeEnd = leave ? dateKey(leave.toDate) : '';
+  const leaveStartKey = leave ? dateKey(leave.fromDate) : '';
+  const leaveEndKey = leave ? dateKey(leave.toDate) : '';
 
   useEffect(() => {
-    if (!holidayRangeStart || !holidayRangeEnd) return;
-    setHolidayLoading(true);
-    setHolidayError('');
-    academicHolidayApi.list({ fromDate: holidayRangeStart, toDate: holidayRangeEnd })
-      .then(setHolidays)
-      .catch(() => setHolidayError('Academic holidays could not be loaded.'))
-      .finally(() => setHolidayLoading(false));
-  }, [holidayRangeStart, holidayRangeEnd]);
+    if (!leaveStartKey || !leaveEndKey) return;
+    setClassifyLoading(true);
+    setClassifyError('');
+    leaveApi.classifyDates(leaveStartKey, leaveEndKey)
+      .then(setClassification)
+      .catch(() => setClassifyError('Academic calendar breakdown could not be loaded.'))
+      .finally(() => setClassifyLoading(false));
+  }, [leaveStartKey, leaveEndKey]);
+
+  // Fetch the gate pass (if any) once the leave is loaded.
+  useEffect(() => {
+    if (!leave?._id) { setGatePass(null); return; }
+    let cancelled = false;
+    gatePassApi.getByLeave(leave._id)
+      .then((pass) => { if (!cancelled) setGatePass(pass ?? null); })
+      .catch(() => { if (!cancelled) setGatePass(null); });
+    return () => { cancelled = true; };
+  }, [leave?._id]);
 
   const handleDownloadPDF = async () => {
     if (!id || !leave) return;
@@ -223,7 +257,7 @@ export function LeaveDetailPage() {
 
   // Can download PDF
   const isApprovedOrCompleted = leave?.status === 'approved' || leave?.status === 'completed';
-  const allowedPdfRoles = ['student', 'guard', 'warden', 'chief_warden', 'hod', 'admin'];
+  const allowedPdfRoles = ['student', 'parent', 'guard', 'warden', 'chief_warden', 'hod', 'admin'];
   const canDownloadPDF = isApprovedOrCompleted && allowedPdfRoles.includes(role);
 
   // Can approve/reject: check if this role needs to act at the current stage
@@ -232,7 +266,8 @@ export function LeaveDetailPage() {
 
   let canApprove = false;
   if (isPending && leave) {
-    if (role === 'admin' || role === 'director') {
+    if (SUPER_APPROVER_ROLES.includes(role)) {
+      // Admin / Chief Warden may finalize at any pending stage.
       canApprove = true;
     } else {
       const requiredStatus = APPROVER_REQUIRED_STATUS[role];
@@ -243,17 +278,37 @@ export function LeaveDetailPage() {
   const statusInfo = leave ? (STATUS_CONFIG[leave.status] ?? STATUS_CONFIG['draft']) : null;
 
   // ── Workflow progress tracker ─────────────────────────────────────
-  /** Determine the state of each workflow stage based on leave status + approvals */
-  function getStageState(stage: typeof WORKFLOW_STAGES[0]): 'done' | 'current' | 'rejected' | 'pending' {
+  const isFinalStatus = leave?.status === 'approved' || leave?.status === 'completed';
+  const rejectedStageIndex = leave
+    ? WORKFLOW_STAGES.findIndex(
+        (stage) => leave.approvals?.some((a) => a.role === stage.role && a.action === 'rejected'),
+      )
+    : -1;
+
+  /**
+   * Determine the state of each workflow stage from the leave status and its
+   * approval records. Stages bypassed by a super-approver decision (or after a
+   * rejection) are marked `skipped` rather than left looking pending forever.
+   */
+  function getStageState(
+    stage: typeof WORKFLOW_STAGES[0],
+    idx: number,
+  ): 'done' | 'current' | 'rejected' | 'skipped' | 'pending' {
     if (!leave) return 'pending';
-    // Check approvals array for a match on this role
     const approval = leave.approvals?.find(a => a.role === stage.role);
     if (approval) {
       return approval.action === 'rejected' ? 'rejected' : 'done';
     }
     // Current stage
     if (leave.status === stage.status) return 'current';
-    // If fully approved/completed/rejected — stages past the rejection point are pending
+    // A finalized leave never has another pending stage: anything without an
+    // approval record was bypassed (e.g. admin/chief warden approved early).
+    if (isFinalStatus) return 'skipped';
+    // Rejected: stages before the rejecting stage were bypassed; later stages
+    // simply never ran.
+    if (leave.status === 'rejected') {
+      return rejectedStageIndex >= 0 && idx < rejectedStageIndex ? 'skipped' : 'pending';
+    }
     return 'pending';
   }
 
@@ -280,15 +335,12 @@ export function LeaveDetailPage() {
     );
   }
 
-  const leaveStartKey = dateKey(leave.fromDate);
-  const leaveEndKey = dateKey(leave.toDate);
   const requestedDays = expandRange(leaveStartKey, leaveEndKey);
   const requestedDaySet = new Set(requestedDays);
-  const holidayDaySet = new Set(holidays.flatMap((holiday) => expandRange(holiday.startDate, holiday.endDate)));
-  const overlapDaySet = new Set(requestedDays.filter((day) => holidayDaySet.has(day)));
-  const holidayRecordsWithinRequest = holidays.filter((holiday) =>
-    expandRange(holiday.startDate, holiday.endDate).some((day) => requestedDaySet.has(day)),
-  ).length;
+  // Map day-key → classification from the server-provided breakdown.
+  const classificationByDay = new Map(
+    (classification?.days ?? []).map((d) => [d.date, d.classification]),
+  );
   const displayStart = dateFromKey(leaveStartKey);
   displayStart.setUTCDate(1);
   const displayEnd = dateFromKey(leaveEndKey);
@@ -358,13 +410,13 @@ export function LeaveDetailPage() {
           </h2>
           <div className="leave-detail__workflow">
             {WORKFLOW_STAGES.map((stage, idx) => {
-              const state = getStageState(stage);
+              const state = getStageState(stage, idx);
               const approval = leave.approvals?.find(a => a.role === stage.role);
               return (
                 <div key={stage.role} className={`leave-detail__wf-step leave-detail__wf-step--${state}`}>
                   {/* Connector line (not on last) */}
                   {idx < WORKFLOW_STAGES.length - 1 && (
-                    <div className={`leave-detail__wf-connector leave-detail__wf-connector--${state === 'done' ? 'done' : 'pending'}`} />
+                    <div className={`leave-detail__wf-connector leave-detail__wf-connector--${state === 'done' || state === 'skipped' ? 'done' : 'pending'}`} />
                   )}
                   {/* Circle */}
                   <div className="leave-detail__wf-circle">
@@ -376,6 +428,9 @@ export function LeaveDetailPage() {
                     )}
                     {state === 'current' && (
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="4" fill="currentColor" /></svg>
+                    )}
+                    {state === 'skipped' && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="6" y1="12" x2="18" y2="12" /></svg>
                     )}
                     {state === 'pending' && (
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4" /></svg>
@@ -400,8 +455,8 @@ export function LeaveDetailPage() {
                         )}
                       </>
                     ) : (
-                      <span className={`leave-detail__wf-status leave-detail__wf-status--${state === 'current' ? 'current' : 'pending'}`}>
-                        {state === 'current' ? 'Awaiting' : 'Pending'}
+                      <span className={`leave-detail__wf-status leave-detail__wf-status--${state === 'current' ? 'current' : state === 'skipped' ? 'skipped' : 'pending'}`}>
+                        {state === 'current' ? 'Awaiting' : state === 'skipped' ? 'Skipped' : 'Pending'}
                       </span>
                     )}
                   </div>
@@ -569,40 +624,79 @@ export function LeaveDetailPage() {
           </div>
         </div>
 
-        {/* ── Leave / Academic Holiday Calendar ─────────────────── */}
+        {/* ── Gate Pass Status ──────────────────────────────────── */}
+        {gatePass && (
+          <div className="leave-detail__card">
+            <h2 className="leave-detail__card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Gate Pass
+            </h2>
+            <div className="leave-detail__grid-2">
+              <div className="leave-detail__field">
+                <span className="leave-detail__field-label">Gate Pass Number</span>
+                <span className="leave-detail__field-value">{gatePass.gatePassNumber}</span>
+              </div>
+              <div className="leave-detail__field">
+                <span className="leave-detail__field-label">Status</span>
+                <span className="leave-detail__field-value">{(gatePass.effectiveStatus ?? gatePass.status).replace(/_/g, ' ')}</span>
+              </div>
+              <div className="leave-detail__field">
+                <span className="leave-detail__field-label">Expected Return</span>
+                <span className="leave-detail__field-value">{formatDate(gatePass.expectedReturn)}</span>
+              </div>
+              <div className="leave-detail__field">
+                <span className="leave-detail__field-label">Actual Exit</span>
+                <span className="leave-detail__field-value">{gatePass.actualExitTime ? formatDateTime(gatePass.actualExitTime) : '—'}</span>
+              </div>
+              <div className="leave-detail__field">
+                <span className="leave-detail__field-label">Actual Return</span>
+                <span className="leave-detail__field-value">{gatePass.actualReturnTime ? formatDateTime(gatePass.actualReturnTime) : '—'}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Leave / Academic Calendar Breakdown ───────────────── */}
         <div className="leave-detail__card leave-detail__calendar-card">
           <h2 className="leave-detail__card-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="4" width="18" height="17" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
             </svg>
-            Leave &amp; Academic Holiday Calendar
+            Leave &amp; Academic Calendar
           </h2>
-          {holidayLoading ? <div className="leave-detail__calendar-state">Loading the latest academic holidays…</div> : holidayError ? <div className="leave-detail__calendar-state leave-detail__calendar-state--error">{holidayError}</div> : (
+          {classifyLoading ? <div className="leave-detail__calendar-state">Loading the academic calendar breakdown…</div> : classifyError ? <div className="leave-detail__calendar-state leave-detail__calendar-state--error">{classifyError}</div> : classification && (
             <>
               <div className="leave-detail__calendar-summary">
-                <span><strong>{requestedDays.length}</strong> requested calendar days</span>
-                <span><strong>{overlapDaySet.size}</strong> overlapping holiday dates</span>
-                <span><strong>{holidayRecordsWithinRequest}</strong> academic holidays in period</span>
-                <span><strong>{requestedDays.length - overlapDaySet.size}</strong> regular academic days</span>
+                <span><strong>{classification.total}</strong> total days</span>
+                <span><strong>{classification.workingDays}</strong> working days</span>
+                <span><strong>{classification.holidays}</strong> holidays</span>
+                <span><strong>{classification.weekendDays}</strong> weekend days</span>
+                <span><strong>{classification.vacationDays}</strong> vacation days</span>
               </div>
               <div className="leave-detail__calendar-legend" aria-label="Calendar legend">
-                <span><i className="leave-detail__legend-swatch leave-detail__legend-swatch--holiday" /> Academic holiday</span>
-                <span><i className="leave-detail__legend-swatch leave-detail__legend-swatch--leave" /> Requested leave</span>
-                <span><i className="leave-detail__legend-swatch leave-detail__legend-swatch--overlap" /> Holiday + leave overlap</span>
-                <span><i className="leave-detail__legend-swatch leave-detail__legend-swatch--regular" /> Regular academic day</span>
+                <span><i className="leave-detail__legend-swatch leave-detail__legend-swatch--regular" /> Working day</span>
+                <span><i className="leave-detail__legend-swatch leave-detail__legend-swatch--holiday" /> Holiday</span>
+                <span><i className="leave-detail__legend-swatch leave-detail__legend-swatch--overlap" /> Weekend</span>
+                <span><i className="leave-detail__legend-swatch leave-detail__legend-swatch--leave" /> Leave day</span>
               </div>
               <div className="leave-detail__calendar-month-label">{displayStart.toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' })}{displayStart.getUTCMonth() !== displayEnd.getUTCMonth() || displayStart.getUTCFullYear() !== displayEnd.getUTCFullYear() ? ` – ${displayEnd.toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' })}` : ''}</div>
               <div className="leave-detail__calendar-grid" role="grid" aria-label="Leave date calendar">
                 {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <span className="leave-detail__calendar-weekday" key={day}>{day}</span>)}
                 {Array.from({ length: leadingBlankDays }, (_, index) => <span className="leave-detail__calendar-day leave-detail__calendar-day--blank" key={`blank-${index}`} />)}
                 {calendarDays.map((day) => {
-                  const isHoliday = holidayDaySet.has(day);
+                  const cls = classificationByDay.get(day);
                   const isLeave = requestedDaySet.has(day);
-                  const className = isHoliday && isLeave ? 'leave-detail__calendar-day--overlap' : isHoliday ? 'leave-detail__calendar-day--holiday' : isLeave ? 'leave-detail__calendar-day--leave' : 'leave-detail__calendar-day--regular';
-                  return <span className={`leave-detail__calendar-day ${className}`} key={day} title={isHoliday && isLeave ? 'Academic holiday and requested leave' : isHoliday ? 'Academic holiday' : isLeave ? 'Requested leave' : 'Regular academic day'}>{dateFromKey(day).getUTCDate()}</span>;
+                  let className = 'leave-detail__calendar-day--regular';
+                  if (isLeave) className = 'leave-detail__calendar-day--leave';
+                  else if (cls === 'holiday') className = 'leave-detail__calendar-day--holiday';
+                  else if (cls === 'vacation') className = 'leave-detail__calendar-day--overlap';
+                  else if (cls === 'weekend') className = 'leave-detail__calendar-day--overlap';
+                  return <span className={`leave-detail__calendar-day ${className}`} key={day} title={cls ? cls.replace(/_/g, ' ') : 'Working day'}>{dateFromKey(day).getUTCDate()}</span>;
                 })}
               </div>
-              <p className="leave-detail__calendar-note">Holiday overlap is informational only. The requested leave dates and approval workflow remain unchanged.</p>
+              <p className="leave-detail__calendar-note">Day-wise breakdown uses the saved academic calendar. Editing the calendar updates this view but never changes past approvals.</p>
             </>
           )}
         </div>

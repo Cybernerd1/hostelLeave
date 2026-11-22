@@ -41,3 +41,17 @@ export {
   getFileExtension,
   generateUploadFilename,
 } from './helpers/string';
+
+export {
+  toDateKey,
+  dateFromKey,
+  addDaysToKey,
+  expandDateRange,
+  rangesOverlap,
+  classifyLeaveDays,
+} from './helpers/leaveCalendar';
+export type {
+  CalendarEventLike,
+  DayInfo,
+  LeaveDayClassification,
+} from './helpers/leaveCalendar';

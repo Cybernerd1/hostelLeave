@@ -7,7 +7,7 @@
  */
 
 import mongoose, { Schema, type Document } from 'mongoose';
-import { HolidayType } from '@hostel/shared-types';
+import { CalendarScope, HolidayType } from '@hostel/shared-types';
 
 export interface IAcademicHolidayDocument extends Document {
   _id: mongoose.Types.ObjectId;
@@ -16,6 +16,9 @@ export interface IAcademicHolidayDocument extends Document {
   endDate: Date;
   description?: string;
   type?: HolidayType;
+  scope: CalendarScope;
+  hostelId?: mongoose.Types.ObjectId;
+  academicYear?: string;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -42,12 +45,27 @@ const academicHolidaySchema = new Schema<IAcademicHolidayDocument>(
     },
     description: { type: String, trim: true, maxlength: 1000 },
     type: { type: String, enum: Object.values(HolidayType), default: HolidayType.OTHER },
+    scope: {
+      type: String,
+      enum: Object.values(CalendarScope),
+      default: CalendarScope.INSTITUTION,
+      index: true,
+    },
+    hostelId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Hostel',
+      index: true,
+    },
+    academicYear: { type: String, trim: true, maxlength: 20 },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true, toJSON: { virtuals: true, versionKey: false } },
 );
 
-academicHolidaySchema.index({ startDate: 1, endDate: 1 }, { unique: true });
+// Calendar entries are scoped by (scope, hostelId); keep lookups fast.
+academicHolidaySchema.index({ startDate: 1, endDate: 1 });
+academicHolidaySchema.index({ scope: 1, hostelId: 1 });
+academicHolidaySchema.index({ academicYear: 1, startDate: 1 });
 academicHolidaySchema.index({ name: 1 });
 
 export const AcademicHoliday = mongoose.model<IAcademicHolidayDocument>(

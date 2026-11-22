@@ -13,6 +13,8 @@ export {
   ApprovalStage,
   ApprovalAction,
   GuardAction,
+  GatePassStatus,
+  PresenceStatus,
   NotificationType,
   HostelType,
   RoomType,
@@ -20,6 +22,8 @@ export {
   ParentRelation,
   Gender,
   HolidayType,
+  CalendarScope,
+  DayClassification,
 } from './enums';
 
 // Model types

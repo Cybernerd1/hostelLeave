@@ -13,8 +13,57 @@ import {
 } from '@hostel/shared-types';
 
 /**
+ * Gate pass status display configuration.
+ */
+export const GATE_PASS_STATUS_CONFIG: Record<
+  string,
+  { label: string; color: string; bgColor: string }
+> = {
+  approved: { label: 'Approved · Not Yet Exited', color: '#1d4ed8', bgColor: '#dbeafe' },
+  out_of_hostel: { label: 'Out of Hostel', color: '#b45309', bgColor: '#fef3c7' },
+  returned: { label: 'Returned', color: '#047857', bgColor: '#d1fae5' },
+  overdue: { label: 'Overdue', color: '#b91c1c', bgColor: '#fee2e2' },
+  cancelled: { label: 'Cancelled', color: '#4b5563', bgColor: '#f3f4f6' },
+};
+
+/**
+ * Academic calendar event category display configuration.
+ * Keyed by HolidayType (the stored category value).
+ */
+export const HOLIDAY_TYPE_CONFIG: Record<
+  string,
+  { label: string; isWorkingDay: boolean; isVacation: boolean }
+> = {
+  national: { label: 'Public Holiday', isWorkingDay: false, isVacation: false },
+  public_holiday: { label: 'Public Holiday', isWorkingDay: false, isVacation: false },
+  festival: { label: 'Festival Holiday', isWorkingDay: false, isVacation: false },
+  institutional: { label: 'Institutional Holiday', isWorkingDay: false, isVacation: false },
+  special_holiday: { label: 'Special Holiday', isWorkingDay: false, isVacation: false },
+  vacation: { label: 'Vacation', isWorkingDay: false, isVacation: true },
+  semester_break: { label: 'Semester Break', isWorkingDay: false, isVacation: true },
+  summer_vacation: { label: 'Summer Vacation', isWorkingDay: false, isVacation: true },
+  winter_vacation: { label: 'Winter Vacation', isWorkingDay: false, isVacation: true },
+  examination: { label: 'Examination Period', isWorkingDay: true, isVacation: false },
+  working_day: { label: 'Working Day', isWorkingDay: true, isVacation: false },
+  other: { label: 'Other', isWorkingDay: false, isVacation: false },
+};
+
+/** Categories a warden may assign to a hostel-specific calendar entry. */
+export const WARDEN_HOLIDAY_TYPES: string[] = [
+  'institutional',
+  'festival',
+  'special_holiday',
+  'working_day',
+  'other',
+];
+
+/**
  * Role hierarchy for the approval workflow.
  * Each role maps to the leave status it transitions FROM and TO.
+ *
+ * Active workflow: Parent → Warden → Chief Warden → APPROVED
+ * Super-approvers (Admin, Chief Warden) can skip stages and finalize immediately.
+ * HOD is not currently used in the active workflow but retained for future extensibility.
  */
 export const APPROVAL_WORKFLOW: Record<
   string,
@@ -40,13 +89,18 @@ export const APPROVAL_WORKFLOW: Record<
     stage: ApprovalStage.WARDEN,
     nextStage: ApprovalStage.CHIEF_WARDEN,
   },
+  // Chief Warden is the final approval authority. Approval here finalizes the
+  // leave (no further stages) and rejection is final. They can also override
+  // by approving leaves at any earlier pending stage, which bypasses intermediate approvers.
   [UserRole.CHIEF_WARDEN]: {
     fromStatus: LeaveStatus.PENDING_CHIEF_WARDEN,
-    toStatusApproved: LeaveStatus.PENDING_HOD,
+    toStatusApproved: LeaveStatus.APPROVED,
     toStatusRejected: LeaveStatus.REJECTED,
     stage: ApprovalStage.CHIEF_WARDEN,
-    nextStage: ApprovalStage.HOD,
+    nextStage: ApprovalStage.COMPLETED,
   },
+  // HOD stage is not currently used in the active workflow. Retained for future extensibility.
+  // The workflow will not reach PENDING_HOD status in current implementation.
   [UserRole.HOD]: {
     fromStatus: LeaveStatus.PENDING_HOD,
     toStatusApproved: LeaveStatus.APPROVED,

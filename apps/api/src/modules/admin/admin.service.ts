@@ -60,9 +60,14 @@ function isTransactionUnsupported(error: unknown): boolean {
 export class AdminService {
   // ─── Students ─────────────────────────────────────────────────────────────
 
-  async assignParentToStudent(studentId: string, parentId: string, actorId: string) {
+  async assignParentToStudent(studentId: string, parentId: string, actorId: string, actorRole?: UserRole) {
     const student = await Student.findById(studentId);
     if (!student) throw AppError.notFound('Student not found');
+
+    if (actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      this.assertStudentInScope(scope, student.hostelId);
+    }
 
     const parent = await Parent.findById(parentId);
     if (!parent) throw AppError.notFound('Parent not found');
@@ -146,6 +151,8 @@ export class AdminService {
 
   async getStudents(
     query: { page: number; limit: number; search?: string; departmentId?: string; hostelId?: string; isActive?: boolean },
+    actorId?: string,
+    actorRole?: UserRole,
   ): Promise<{ data: unknown[]; pagination: PaginationMeta }> {
     const filter: Record<string, unknown> = {};
 
@@ -153,11 +160,26 @@ export class AdminService {
       filter.$or = [
         { name: { $regex: query.search, $options: 'i' } },
         { rollNumber: { $regex: query.search, $options: 'i' } },
+        { studentNumber: { $regex: query.search, $options: 'i' } },
       ];
     }
     if (query.departmentId) { filter.departmentId = query.departmentId; }
-    if (query.hostelId) { filter.hostelId = query.hostelId; }
     if (query.isActive !== undefined) { filter.isActive = query.isActive; }
+
+    // Hostel scoping: wardens only ever see students in their assigned hostel(s).
+    if (actorId && actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      if (scope !== null) {
+        if (query.hostelId && !scope.includes(query.hostelId)) {
+          throw AppError.forbidden('You are not authorized to view students from this hostel');
+        }
+        filter.hostelId = { $in: scope };
+      } else if (query.hostelId) {
+        filter.hostelId = query.hostelId;
+      }
+    } else if (query.hostelId) {
+      filter.hostelId = query.hostelId;
+    }
 
     const total = await Student.countDocuments(filter);
     const data = await Student.find(filter)
@@ -174,8 +196,8 @@ export class AdminService {
     return { data, pagination: buildPaginationMeta(query.page, query.limit, total) };
   }
 
-  async getStudentById(id: string) {
-    return Student.findById(id)
+  async getStudentById(id: string, actorId?: string, actorRole?: UserRole) {
+    const student = await Student.findById(id)
       .populate('userId', 'email role isActive lastLogin')
       .populate('departmentId', 'name code')
       .populate('courseId', 'name code')
@@ -184,12 +206,32 @@ export class AdminService {
       .populate('allocatedBy', 'name email role')
       .populate('parentId', 'name phone email relation')
       .lean();
+    if (!student) return student;
+
+    if (actorId && actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      // Wardens (scope array) may only view students in their hostel(s).
+      const hostelId = this.extractHostelId((student as Record<string, unknown>).hostelId);
+      if (scope !== null && (!hostelId || !scope.includes(hostelId))) {
+        throw AppError.forbidden('You are not authorized to view this student');
+      }
+    }
+    return student;
   }
 
-  async updateStudent(id: string, data: Record<string, unknown>, adminId: string) {
+  async updateStudent(id: string, data: Record<string, unknown>, adminId: string, actorRole?: UserRole) {
     const student = await Student.findById(id);
     if (!student) {
       throw AppError.notFound('Student not found');
+    }
+
+    if (actorRole) {
+      const scope = await this.getAccessibleHostelIds(adminId, actorRole);
+      this.assertHostelInScope(scope, student.hostelId);
+      // Wardens may not move a student to a hostel outside their scope.
+      if (data.hostelId !== undefined) {
+        this.assertHostelInScope(scope, data.hostelId);
+      }
     }
 
     const previousData = student.toObject();
@@ -241,9 +283,17 @@ export class AdminService {
    * hostelId/roomId are required in the schema, so unassignment and
    * room-clearing go through updateOne with $unset to bypass validators.
    */
-  async assignHostelToStudent(studentId: string, hostelId: string | null, actorId: string) {
+  async assignHostelToStudent(studentId: string, hostelId: string | null, actorId: string, actorRole?: UserRole) {
     const student = await Student.findById(studentId);
     if (!student) { throw AppError.notFound('Student not found'); }
+
+    if (actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      // Wardens may only move students currently in their hostel, and only to
+      // a hostel within their scope.
+      this.assertStudentInScope(scope, student.hostelId);
+      if (hostelId) this.assertHostelInScope(scope, hostelId);
+    }
 
     const previousHostelId = student.hostelId;
 
@@ -263,9 +313,10 @@ export class AdminService {
       });
       logger.info(`Hostel unassigned from student ${studentId} by ${actorId}`);
       return Student.findById(studentId)
-        .populate('hostelId', 'name type')
-        .populate('roomId', 'roomNumber floor')
-        .lean();
+      .populate('hostelId', 'name type')
+      .populate('roomId', 'roomNumber floor')
+      .populate('registrationFormId', 'title token academicSession')
+      .lean();
     }
 
     // ── Assign / reassign ──
@@ -359,7 +410,7 @@ export class AdminService {
     return parent;
   }
 
-  async getParents(query: { page: number; limit: number; search?: string }) {
+  async getParents(query: { page: number; limit: number; search?: string }, actorId?: string, actorRole?: UserRole) {
     const filter: Record<string, unknown> = {};
     if (query.search) {
       filter.$or = [
@@ -367,6 +418,15 @@ export class AdminService {
         { email: { $regex: query.search, $options: 'i' } },
         { phone: { $regex: query.search, $options: 'i' } },
       ];
+    }
+
+    // Scope parents to those linked to students in the warden's hostel(s).
+    if (actorId && actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      if (scope !== null) {
+        const parentIds = await Student.find({ hostelId: { $in: scope } }).distinct('parentId');
+        filter._id = { $in: parentIds.filter(Boolean) };
+      }
     }
 
     const total = await Parent.countDocuments(filter);
@@ -637,6 +697,72 @@ export class AdminService {
     }
   }
 
+  /**
+   * Resolve the set of hostel IDs an actor may access.
+   * Returns null for unrestricted roles (admin, chief warden) and an array
+   * (possibly empty) of allowed hostel ID strings for a warden.
+   * Wardens with no assigned hostel get an empty array — never unrestricted.
+   */
+  private async getAccessibleHostelIds(actorId: string, actorRole: UserRole): Promise<string[] | null> {
+    if (actorRole === UserRole.ADMIN || actorRole === UserRole.CHIEF_WARDEN) {
+      return null;
+    }
+    if (actorRole === UserRole.WARDEN) {
+      const hostels = await Hostel.find({ wardenId: actorId }).select('_id').lean();
+      return hostels.map((hostel) => String(hostel._id));
+    }
+    // Any other role reaching a management endpoint is denied outright.
+    throw AppError.forbidden('Your role is not permitted to manage hostel resources');
+  }
+
+  /**
+   * Merge an actor's hostel scope into a Mongo filter.
+   * For wardens this restricts the query to their assigned hostels. Passing a
+   * `field` scopes that field with $in; passing no field means the caller has
+   * no hostel-based field to scope (e.g. students pre-allocation) — handled by
+   * the caller instead.
+   */
+  private applyHostelScope(
+    filter: Record<string, unknown>,
+    scope: string[] | null,
+    field = 'hostelId',
+  ): void {
+    if (scope === null) return;
+    filter[field] = { $in: scope };
+  }
+
+  /** Throw forbidden when a warden targets a hostel outside their scope. */
+  private assertHostelInScope(scope: string[] | null, hostelId: unknown): void {
+    if (scope === null) return;
+    if (!hostelId || !scope.includes(String(hostelId))) {
+      throw AppError.forbidden('You are not authorized to access this hostel');
+    }
+  }
+
+  /**
+   * Throw forbidden when a warden targets a student outside their hostel scope.
+   * Unallocated students (no hostelId) are considered in scope so they can be
+   * allocated into the warden's hostel.
+   */
+  private assertStudentInScope(scope: string[] | null, hostelId: unknown): void {
+    if (scope === null) return;
+    if (hostelId && !scope.includes(String(hostelId))) {
+      throw AppError.forbidden('You are not authorized to access this student');
+    }
+  }
+
+  /**
+   * Normalize a possibly-populated / ObjectId hostel reference to its string id.
+   * Handles a populated document ({ _id }), a raw ObjectId (toString), or null.
+   */
+  private extractHostelId(hostelId: unknown): string | null {
+    if (!hostelId) return null;
+    if (typeof hostelId === 'object' && hostelId !== null && '_id' in hostelId) {
+      return String((hostelId as { _id: unknown })._id);
+    }
+    return String(hostelId);
+  }
+
   async createHostel(data: Record<string, unknown>, adminId: string) {
     const config = this.getHostelConfiguration(data);
     const name = String(data.name || '').trim();
@@ -675,10 +801,16 @@ export class AdminService {
     return formatted[0];
   }
 
-  async getHostels(query: { page: number; limit: number; search?: string }) {
+  async getHostels(query: { page: number; limit: number; search?: string }, actorId?: string, actorRole?: UserRole) {
     const filter: Record<string, unknown> = {};
     if (query.search) {
       filter.name = { $regex: query.search, $options: 'i' };
+    }
+
+    // Wardens only see the hostel(s) they are assigned to.
+    if (actorId && actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      this.applyHostelScope(filter, scope, '_id');
     }
 
     const total = await Hostel.countDocuments(filter);
@@ -694,9 +826,13 @@ export class AdminService {
     return { data, pagination: buildPaginationMeta(query.page, query.limit, total) };
   }
 
-  async updateHostel(id: string, data: Record<string, unknown>, adminId: string) {
+  async updateHostel(id: string, data: Record<string, unknown>, adminId: string, actorRole?: UserRole) {
     const hostel = await Hostel.findById(id);
     if (!hostel) throw AppError.notFound('Hostel not found');
+    if (actorRole) {
+      const scope = await this.getAccessibleHostelIds(adminId, actorRole);
+      this.assertHostelInScope(scope, hostel._id);
+    }
     const config = this.getHostelConfiguration(data, hostel);
     if (data.name && String(data.name).trim().toLowerCase() !== hostel.name.toLowerCase()) {
       const duplicate = await Hostel.findOne({ _id: { $ne: hostel._id }, name: { $regex: `^${String(data.name).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } });
@@ -787,9 +923,13 @@ export class AdminService {
 
   // ─── Rooms ────────────────────────────────────────────────────────────────
 
-  async createRoom(data: Record<string, unknown>, adminId: string) {
+  async createRoom(data: Record<string, unknown>, adminId: string, actorRole?: UserRole) {
     const hostel = await Hostel.findById(data.hostelId);
     if (!hostel) throw AppError.notFound('Hostel not found');
+    if (actorRole) {
+      const scope = await this.getAccessibleHostelIds(adminId, actorRole);
+      this.assertHostelInScope(scope, hostel._id);
+    }
     const capacity = Number(data.capacity);
     if (![1, 2, 3].includes(capacity)) throw AppError.badRequest('Room capacity must be 1, 2, or 3');
     const room = await Room.create({
@@ -836,11 +976,25 @@ export class AdminService {
     });
   }
 
-  async getRooms(query: { page: number; limit: number; hostelId?: string; search?: string; availability?: string }) {
+  async getRooms(query: { page: number; limit: number; hostelId?: string; search?: string; availability?: string }, actorId?: string, actorRole?: UserRole) {
     const filter: Record<string, unknown> = {};
-    if (query.hostelId) { filter.hostelId = query.hostelId; }
     if (query.search) {
       filter.roomNumber = { $regex: query.search, $options: 'i' };
+    }
+
+    // Wardens only see rooms in their assigned hostel(s).
+    if (actorId && actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      if (scope !== null) {
+        if (query.hostelId && !scope.includes(query.hostelId)) {
+          throw AppError.forbidden('You are not authorized to view rooms from this hostel');
+        }
+        filter.hostelId = { $in: scope };
+      } else if (query.hostelId) {
+        filter.hostelId = query.hostelId;
+      }
+    } else if (query.hostelId) {
+      filter.hostelId = query.hostelId;
     }
 
     const total = await Room.countDocuments(filter);
@@ -889,9 +1043,13 @@ export class AdminService {
     return this.getHostelRooms(hostelId, actorId, actorRole, true);
   }
 
-  async updateRoom(id: string, data: Record<string, unknown>, adminId: string) {
+  async updateRoom(id: string, data: Record<string, unknown>, adminId: string, actorRole?: UserRole) {
     const room = await Room.findById(id);
     if (!room) throw AppError.notFound('Room not found');
+    if (actorRole) {
+      const scope = await this.getAccessibleHostelIds(adminId, actorRole);
+      this.assertHostelInScope(scope, room.hostelId);
+    }
     if (data.capacity !== undefined) {
       const capacity = Number(data.capacity);
       if (![1, 2, 3].includes(capacity)) throw AppError.badRequest('Room capacity must be 1, 2, or 3');
@@ -912,9 +1070,13 @@ export class AdminService {
     return this.formatRooms([room.toObject()]).then((rooms) => rooms[0]);
   }
 
-  async deleteRoom(id: string, actorId: string) {
+  async deleteRoom(id: string, actorId: string, actorRole?: UserRole) {
     const room = await Room.findById(id);
     if (!room) throw AppError.notFound('Room not found');
+    if (actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      this.assertHostelInScope(scope, room.hostelId);
+    }
     const activeStudents = await Student.countDocuments({ isActive: true, roomId: room._id });
     if (activeStudents > 0) throw AppError.badRequest('Room has allocated students. Remove or transfer them before deleting it.');
     const historyCount = await AllocationHistory.countDocuments({ roomId: room._id });
@@ -924,9 +1086,13 @@ export class AdminService {
     return { deleted: true, id };
   }
 
-  async deleteHostel(id: string, actorId: string) {
+  async deleteHostel(id: string, actorId: string, actorRole?: UserRole) {
     const hostel = await Hostel.findById(id);
     if (!hostel) throw AppError.notFound('Hostel not found');
+    if (actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      this.assertHostelInScope(scope, hostel._id);
+    }
     const activeStudents = await Student.countDocuments({ isActive: true, hostelId: hostel._id });
     if (activeStudents > 0) throw AppError.badRequest('Hostel has allocated students. Remove or transfer them before deleting it.');
     const roomIds = await Room.find({ hostelId: hostel._id }).distinct('_id');
@@ -938,8 +1104,19 @@ export class AdminService {
     return { deleted: true, id };
   }
 
-  async getAllocationCandidates() {
-    return Student.find({ isActive: true, applicationStatus: { $in: ['approved', 'allocated'] } })
+  async getAllocationCandidates(actorId?: string, actorRole?: UserRole) {
+    const filter: Record<string, unknown> = {
+      isActive: true,
+      applicationStatus: { $in: ['approved', 'allocated'] },
+    };
+    if (actorId && actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      // Wardens only get candidates already in their hostel(s).
+      if (scope !== null) {
+        filter.hostelId = { $in: scope };
+      }
+    }
+    return Student.find(filter)
       .select('name rollNumber studentNumber gender applicationStatus hostelId roomId')
       .sort({ name: 1 })
       .lean();
@@ -1360,7 +1537,8 @@ export class AdminService {
     departmentId?: string;
     courseId?: string;
     hostelId?: string;
-  }) {
+    registrationFormId?: string;
+  }, actorId?: string, actorRole?: UserRole) {
     const filter: Record<string, unknown> = { isActive: true };
 
     if (query.search) {
@@ -1375,6 +1553,27 @@ export class AdminService {
     if (query.source) filter.source = query.source;
     if (query.departmentId) filter.departmentId = query.departmentId;
     if (query.courseId) filter.courseId = query.courseId;
+    if (query.registrationFormId) filter.registrationFormId = query.registrationFormId;
+
+    // Hostel scoping for applications.
+    // Applications are only tied to a hostel once allocated. Wardens may see
+    // applications in their hostel(s) plus unallocated applications (no hostel
+    // yet) which must still be processed. A warden can never see an application
+    // allocated to a different hostel, even via a hostelId query param.
+    if (actorId && actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      if (scope !== null) {
+        if (query.hostelId && !scope.includes(query.hostelId)) {
+          throw AppError.forbidden('You are not authorized to view applications from this hostel');
+        }
+        const scopeClause = { $or: [{ hostelId: { $in: scope } }, { hostelId: { $exists: false } }, { hostelId: null }] };
+        filter.$and = [...(filter.$and as unknown[] || []), scopeClause];
+      } else if (query.hostelId) {
+        filter.hostelId = query.hostelId;
+      }
+    } else if (query.hostelId) {
+      filter.hostelId = query.hostelId;
+    }
 
     const total = await StudentApplication.countDocuments(filter);
     const data = await StudentApplication.find(filter)
@@ -1392,8 +1591,8 @@ export class AdminService {
     return { data, pagination: buildPaginationMeta(query.page, query.limit, total) };
   }
 
-  async getApplicationById(id: string) {
-    return StudentApplication.findById(id)
+  async getApplicationById(id: string, actorId?: string, actorRole?: UserRole) {
+    const application = await StudentApplication.findById(id)
       .populate('departmentId', 'name code')
       .populate('courseId', 'name code')
       .populate('reviewedBy', 'name email role')
@@ -1402,16 +1601,41 @@ export class AdminService {
       .populate('roomId', 'roomNumber floor type capacity occupied')
       .populate('registrationFormId', 'title token academicSession')
       .lean();
+    if (!application) return application;
+
+    if (actorId && actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      if (scope !== null) {
+        const appHostelId = (application.hostelId as { _id?: string } | undefined)?._id || application.hostelId;
+        // Wardens may view applications in their hostel(s) or unallocated ones.
+        if (appHostelId && !scope.includes(String(appHostelId))) {
+          throw AppError.forbidden('You are not authorized to view this application');
+        }
+      }
+    }
+    return application;
   }
 
   async approveRejectApplication(
     id: string,
     data: { action: 'approve' | 'reject'; reviewNotes?: string; rejectionReason?: string },
-    actorId: string
+    actorId: string,
+    actorRole?: UserRole,
   ) {
     const application = await StudentApplication.findById(id);
     if (!application) {
       throw AppError.notFound('Application not found');
+    }
+
+    // Wardens may only act on applications tied to their hostel or unallocated.
+    if (actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      if (scope !== null) {
+        const appHostelId = application.hostelId;
+        if (appHostelId && !scope.includes(String(appHostelId))) {
+          throw AppError.forbidden('You are not authorized to review this application');
+        }
+      }
     }
 
     if (application.status !== 'pending' && application.status !== 'under_review') {
@@ -1705,6 +1929,10 @@ export class AdminService {
     actorRole: UserRole,
   ) {
     if (!['approved', 'allocated'].includes(student.applicationStatus) && !student.roomId) throw AppError.badRequest('Only approved students can be allocated');
+    // Wardens may only (re)allocate students already in their hostel, or
+    // unallocated students (who can be moved into their hostel).
+    const actorScope = await this.getAccessibleHostelIds(actorId, actorRole);
+    this.assertStudentInScope(actorScope, student.hostelId);
     await this.assertAllocationTarget(data, actorId, actorRole, student.gender);
     if (student.roomId && String(student.roomId) === data.roomId) throw AppError.badRequest('Student is already allocated to this room');
     await this.reconcileOccupancy(student.roomId, student.hostelId);
@@ -1728,20 +1956,29 @@ export class AdminService {
     return this.allocateStudent(student, application, data, actorId, actorRole);
   }
 
-  async getStudentAllocation(studentId: string) {
+  async getStudentAllocation(studentId: string, actorId?: string, actorRole?: UserRole) {
     const student = await Student.findById(studentId)
       .populate('hostelId', 'name type')
       .populate('roomId', 'roomNumber floor type capacity')
       .populate('allocatedBy', 'name email role')
       .lean();
     if (!student) throw AppError.notFound('Student not found');
+    if (actorId && actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      const studentHostelId = (student.hostelId as { _id?: string } | undefined)?._id || student.hostelId;
+      this.assertStudentInScope(scope, studentHostelId);
+    }
     const history = await AllocationHistory.find({ studentId }).sort({ allocatedAt: -1 }).populate('allocatedBy', 'name email role').lean();
     return { student, history };
   }
 
-  async removeStudentFromRoom(studentId: string, actorId: string) {
+  async removeStudentFromRoom(studentId: string, actorId: string, actorRole?: UserRole) {
     const student = await Student.findById(studentId);
     if (!student) throw AppError.notFound('Student not found');
+    if (actorRole) {
+      const scope = await this.getAccessibleHostelIds(actorId, actorRole);
+      this.assertStudentInScope(scope, student.hostelId);
+    }
     if (!student.roomId) throw AppError.badRequest('Student is not assigned to a room');
 
     const roomId = student.roomId;
@@ -1853,6 +2090,14 @@ export class AdminService {
       .lean();
 
     return { data, pagination: buildPaginationMeta(query.page, query.limit, total) };
+  }
+
+  async getRegistrationFormById(id: string) {
+    const form = await RegistrationForm.findById(id)
+      .populate('createdBy', 'name email role')
+      .lean();
+    if (!form) throw AppError.notFound('Registration form not found');
+    return form;
   }
 
   async updateRegistrationForm(id: string, data: Record<string, unknown>, actorId: string) {

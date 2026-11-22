@@ -49,6 +49,7 @@ export {
   createStaffSchema,
   verifyQRSchema,
   markGateSchema,
+  gatePassQuerySchema,
   type PaginationSchemaType,
   type CreateStudentSchemaType,
   type UpdateStudentSchemaType,
@@ -75,4 +76,5 @@ export {
   type CreateStaffSchemaType,
   type VerifyQRSchemaType,
   type MarkGateSchemaType,
+  type GatePassQuerySchemaType,
 } from './admin.schema';

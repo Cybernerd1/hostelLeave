@@ -43,6 +43,13 @@ router.post(
   guardController.markCheckOut,
 );
 
+// Look up a leave/pass for the scan screen (by leave id or gate pass number)
+router.get(
+  '/lookup/:identifier',
+  authorize(UserRole.GUARD),
+  guardController.lookupPass,
+);
+
 router.get(
   '/log',
   authorize(UserRole.GUARD, UserRole.ADMIN),

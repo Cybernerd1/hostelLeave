@@ -130,8 +130,14 @@ const roleConfigs: Partial<Record<UserRole, RoleConfig>> = {
     navGroups: [
       group('overview', 'Overview', ICONS.dashboard, [{ label: 'Dashboard', path: '/warden/dashboard', icon: ICONS.dashboard, end: true }]),
       group('student-management', 'Student Management', ICONS.students, [
+        { label: 'All Students', path: '/admin/students', icon: ICONS.students },
         { label: 'Applications & Approvals', path: '/admin/applications', icon: ICONS.applications },
         { label: 'Registration Forms', path: '/admin/registration-forms', icon: ICONS.registrationForms },
+        { label: 'Parents / Guardians', path: '/admin/parents', icon: ICONS.parents },
+      ]),
+      group('hostel-management', 'Hostel Management', ICONS.hostels, [
+        { label: 'All Hostels', path: '/admin/hostels', icon: ICONS.hostels },
+        { label: 'Rooms & Bed Capacity', path: '/admin/rooms', icon: ICONS.rooms },
       ]),
       group('leave-management', 'Leave Management', ICONS.leaves, [
         { label: 'Pending Leave Requests', path: '/warden/approvals', icon: ICONS.approvals },
@@ -152,14 +158,17 @@ const roleConfigs: Partial<Record<UserRole, RoleConfig>> = {
     navGroups: [
       group('overview', 'Overview', ICONS.dashboard, [{ label: 'Dashboard', path: '/chief-warden/dashboard', icon: ICONS.dashboard, end: true }]),
       group('student-management', 'Student Management', ICONS.students, [
-        { label: 'All Students', path: '/chief-warden/students', icon: ICONS.students },
+        { label: 'All Students', path: '/admin/students', icon: ICONS.students },
         { label: 'Applications & Approvals', path: '/admin/applications', icon: ICONS.applications },
         { label: 'Registration Forms', path: '/admin/registration-forms', icon: ICONS.registrationForms },
+        { label: 'Import Students', path: '/admin/students/import', icon: ICONS.scan },
+        { label: 'Parents / Guardians', path: '/admin/parents', icon: ICONS.parents },
         { label: 'Academic Holidays', path: '/chief-warden/holidays', icon: ICONS.calendar },
       ]),
       group('hostel-management', 'Hostel Management', ICONS.hostels, [
         { label: 'Manage Hostels', path: '/chief-warden/manage', icon: ICONS.hostelManage },
-        { label: 'Hostels & Rooms', path: '/admin/hostels', icon: ICONS.hostels },
+        { label: 'All Hostels', path: '/admin/hostels', icon: ICONS.hostels },
+        { label: 'Rooms & Bed Capacity', path: '/admin/rooms', icon: ICONS.rooms },
       ]),
       group('leave-management', 'Leave Management', ICONS.leaves, [
         { label: 'Pending Approvals', path: '/chief-warden/approvals', icon: ICONS.approvals },

@@ -10,8 +10,8 @@ import './GuardPages.css';
 
 interface GateLogEntry {
   _id: string;
-  leaveId: { _id?: string; leaveId?: string; studentId?: { name: string; rollNumber: string } };
-  action: 'exit' | 'return';
+  leaveRequestId: { _id?: string; leaveId?: string; studentId?: { name: string; rollNumber: string } };
+  action: 'exit' | 'entry';
   timestamp: string;
   guardId: { name: string };
 }
@@ -62,14 +62,14 @@ export function GateLogPage() {
               </thead>
               <tbody>
                 {logs.map((l) => {
-                  const leaveIdStr = typeof l.leaveId === 'object' ? l.leaveId?._id || l.leaveId?.leaveId : l.leaveId;
-                  const displayLeaveId = typeof l.leaveId === 'object' ? l.leaveId?.leaveId : l.leaveId;
+                  const leaveIdStr = typeof l.leaveRequestId === 'object' ? l.leaveRequestId?._id || l.leaveRequestId?.leaveId : l.leaveRequestId;
+                  const displayLeaveId = typeof l.leaveRequestId === 'object' ? l.leaveRequestId?.leaveId : l.leaveRequestId;
                   return (
                     <tr key={l._id}>
                       <td className="cell-secondary">{formatDate(l.timestamp)}</td>
                       <td>
-                        <div className="cell-primary">{typeof l.leaveId === 'object' ? l.leaveId?.studentId?.name : '—'}</div>
-                        <div className="cell-secondary">{typeof l.leaveId === 'object' ? l.leaveId?.studentId?.rollNumber : ''}</div>
+                        <div className="cell-primary">{typeof l.leaveRequestId === 'object' ? l.leaveRequestId?.studentId?.name : '—'}</div>
+                        <div className="cell-secondary">{typeof l.leaveRequestId === 'object' ? l.leaveRequestId?.studentId?.rollNumber : ''}</div>
                       </td>
                       <td><code className="leave-id">{displayLeaveId || '—'}</code></td>
                       <td>

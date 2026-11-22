@@ -174,6 +174,7 @@ export interface ApplicationRecord {
   guardianCountry?: string;
   hostelId?: { _id: string; name: string; type: string };
   roomId?: { _id: string; roomNumber: string; floor: string };
+  registrationFormId?: { _id: string; title: string; token: string; academicSession?: string };
   reviewedBy?: { _id: string; name: string; email: string };
   reviewedAt?: string;
   reviewNotes?: string;
@@ -469,6 +470,7 @@ export const adminApi = {
     departmentId?: string;
     courseId?: string;
     hostelId?: string;
+    registrationFormId?: string;
   }): Promise<PaginatedResponse<ApplicationRecord>> => {
     const res = await api.get('/admin/applications', { params });
     return { data: res.data.data, pagination: res.data.pagination };
@@ -540,6 +542,11 @@ export const adminApi = {
   }): Promise<PaginatedResponse<RegistrationFormRecord>> => {
     const res = await api.get('/admin/registration-forms', { params });
     return { data: res.data.data, pagination: res.data.pagination };
+  },
+
+  getRegistrationFormById: async (id: string): Promise<RegistrationFormRecord> => {
+    const res = await api.get<{ success: boolean; data: RegistrationFormRecord }>(`/admin/registration-forms/${id}`);
+    return res.data.data;
   },
 
   updateRegistrationForm: async (id: string, data: Record<string, unknown>): Promise<RegistrationFormRecord> => {

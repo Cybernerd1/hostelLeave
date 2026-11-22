@@ -5,6 +5,7 @@
  */
 
 import api from './api';
+import { academicHolidayApi, type LeaveClassification } from './academicHoliday.service';
 
 /**
  * Matches the populated LeaveApproval document returned by GET /leaves/:id
@@ -126,5 +127,13 @@ export const leaveApi = {
     return response.data.data as {
       total: number; pending: number; approved: number; rejected: number; active: number;
     };
+  },
+
+  /**
+   * Classify the days of a leave request against the academic calendar.
+   * Returns a day-wise breakdown (working / holiday / weekend / vacation).
+   */
+  classifyDates: async (fromDate: string, toDate: string): Promise<LeaveClassification> => {
+    return academicHolidayApi.classify(fromDate, toDate);
   },
 };

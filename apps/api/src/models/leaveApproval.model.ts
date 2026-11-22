@@ -3,6 +3,10 @@
  *
  * Records each approval/rejection action in the leave workflow.
  * One record per approval stage per leave request.
+ * 
+ * The `stageBypassed` field records whether this approval skipped intermediate stages.
+ * For example, if Chief Warden approves a PENDING_WARDEN leave directly, the Chief Warden's
+ * approval record will have stageBypassed=true, indicating the Warden stage was skipped.
  */
 
 import mongoose, { Schema, type Document } from 'mongoose';
@@ -17,6 +21,8 @@ export interface ILeaveApprovalDocument extends Document {
   action: ApprovalAction;
   remarks?: string;
   actionDate: Date;
+  stageBypassed?: boolean;
+  bypassedFromStatus?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +59,14 @@ const leaveApprovalSchema = new Schema<ILeaveApprovalDocument>(
     actionDate: {
       type: Date,
       default: Date.now,
+    },
+    stageBypassed: {
+      type: Boolean,
+      default: false,
+    },
+    bypassedFromStatus: {
+      type: String,
+      trim: true,
     },
   },
   {

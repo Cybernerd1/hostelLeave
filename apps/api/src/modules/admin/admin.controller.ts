@@ -27,18 +27,18 @@ export const getStudents = asyncHandler(async (req: Request, res: Response) => {
     departmentId: req.query.departmentId as string,
     hostelId: req.query.hostelId as string,
     isActive: req.query.isActive !== undefined ? req.query.isActive === 'true' : undefined,
-  });
+  }, req.user!.userId, req.user!.role);
   sendPaginated(res, result.data, result.pagination, 'Students retrieved');
 });
 
 export const getStudentById = asyncHandler(async (req: Request, res: Response) => {
-  const student = await adminService.getStudentById(req.params.id);
+  const student = await adminService.getStudentById(req.params.id, req.user!.userId, req.user!.role);
   if (!student) { return sendSuccess(res, null, 'Student not found'); }
   sendSuccess(res, student, 'Student retrieved');
 });
 
 export const updateStudent = asyncHandler(async (req: Request, res: Response) => {
-  const student = await adminService.updateStudent(req.params.id, req.body, req.user!.userId);
+  const student = await adminService.updateStudent(req.params.id, req.body, req.user!.userId, req.user!.role);
   sendSuccess(res, student, 'Student updated successfully');
 });
 
@@ -52,6 +52,7 @@ export const assignParent = asyncHandler(async (req: Request, res: Response) => 
     req.params.id,
     req.body.parentId,
     req.user!.userId,
+    req.user!.role,
   );
   sendSuccess(res, result, 'Parent assigned successfully');
 });
@@ -62,6 +63,7 @@ export const assignHostelToStudent = asyncHandler(async (req: Request, res: Resp
     req.params.id,
     req.body.hostelId ?? null,
     req.user!.userId,
+    req.user!.role,
   );
   sendSuccess(res, student, 'Hostel assignment updated successfully');
 });
@@ -78,7 +80,7 @@ export const getParents = asyncHandler(async (req: Request, res: Response) => {
     page: Number(req.query.page || 1),
     limit: Number(req.query.limit || 20),
     search: req.query.search as string,
-  });
+  }, req.user!.userId, req.user!.role);
   sendPaginated(res, result.data, result.pagination, 'Parents retrieved');
 });
 
@@ -152,24 +154,24 @@ export const getHostels = asyncHandler(async (req: Request, res: Response) => {
     page: Number(req.query.page || 1),
     limit: Number(req.query.limit || 20),
     search: req.query.search as string,
-  });
+  }, req.user!.userId, req.user!.role);
   sendPaginated(res, result.data, result.pagination, 'Hostels retrieved');
 });
 
 export const updateHostel = asyncHandler(async (req: Request, res: Response) => {
-  const hostel = await adminService.updateHostel(req.params.id, req.body, req.user!.userId);
+  const hostel = await adminService.updateHostel(req.params.id, req.body, req.user!.userId, req.user!.role);
   sendSuccess(res, hostel, 'Hostel updated successfully');
 });
 
 export const deleteHostel = asyncHandler(async (req: Request, res: Response) => {
-  const result = await adminService.deleteHostel(req.params.id, req.user!.userId);
+  const result = await adminService.deleteHostel(req.params.id, req.user!.userId, req.user!.role);
   sendSuccess(res, result, 'Hostel deleted successfully');
 });
 
 // ─── Rooms ────────────────────────────────────────────────────────────────
 
 export const createRoom = asyncHandler(async (req: Request, res: Response) => {
-  const room = await adminService.createRoom(req.body, req.user!.userId);
+  const room = await adminService.createRoom(req.body, req.user!.userId, req.user!.role);
   sendCreated(res, room, 'Room created successfully');
 });
 
@@ -180,17 +182,17 @@ export const getRooms = asyncHandler(async (req: Request, res: Response) => {
     hostelId: req.query.hostelId as string,
     search: req.query.search as string,
     availability: req.query.availability as string,
-  });
+  }, req.user!.userId, req.user!.role);
   sendPaginated(res, result.data, result.pagination, 'Rooms retrieved');
 });
 
 export const updateRoom = asyncHandler(async (req: Request, res: Response) => {
-  const room = await adminService.updateRoom(req.params.id, req.body, req.user!.userId);
+  const room = await adminService.updateRoom(req.params.id, req.body, req.user!.userId, req.user!.role);
   sendSuccess(res, room, 'Room updated successfully');
 });
 
 export const deleteRoom = asyncHandler(async (req: Request, res: Response) => {
-  const result = await adminService.deleteRoom(req.params.id, req.user!.userId);
+  const result = await adminService.deleteRoom(req.params.id, req.user!.userId, req.user!.role);
   sendSuccess(res, result, 'Room deleted successfully');
 });
 
@@ -292,12 +294,13 @@ export const getApplications = asyncHandler(async (req: Request, res: Response) 
     departmentId: req.query.departmentId as string,
     courseId: req.query.courseId as string,
     hostelId: req.query.hostelId as string,
-  });
+    registrationFormId: req.query.registrationFormId as string,
+  }, req.user!.userId, req.user!.role);
   sendPaginated(res, result.data, result.pagination, 'Applications retrieved');
 });
 
 export const getApplicationById = asyncHandler(async (req: Request, res: Response) => {
-  const application = await adminService.getApplicationById(req.params.id);
+  const application = await adminService.getApplicationById(req.params.id, req.user!.userId, req.user!.role);
   if (!application) { return sendSuccess(res, null, 'Application not found'); }
   sendSuccess(res, application, 'Application retrieved');
 });
@@ -307,6 +310,7 @@ export const approveRejectApplication = asyncHandler(async (req: Request, res: R
     req.params.id,
     req.body,
     req.user!.userId,
+    req.user!.role,
   );
   sendSuccess(res, application, `Application ${req.body.action}d successfully`);
 });
@@ -329,17 +333,17 @@ export const allocateApplication = asyncHandler(async (req: Request, res: Respon
 });
 
 export const getStudentAllocation = asyncHandler(async (req: Request, res: Response) => {
-  const allocation = await adminService.getStudentAllocation(req.params.id);
+  const allocation = await adminService.getStudentAllocation(req.params.id, req.user!.userId, req.user!.role);
   sendSuccess(res, allocation, 'Student allocation retrieved');
 });
 
-export const getAllocationCandidates = asyncHandler(async (_req: Request, res: Response) => {
-  const students = await adminService.getAllocationCandidates();
+export const getAllocationCandidates = asyncHandler(async (req: Request, res: Response) => {
+  const students = await adminService.getAllocationCandidates(req.user!.userId, req.user!.role);
   sendSuccess(res, students, 'Allocation candidates retrieved');
 });
 
 export const removeStudentFromRoom = asyncHandler(async (req: Request, res: Response) => {
-  const student = await adminService.removeStudentFromRoom(req.params.id, req.user!.userId);
+  const student = await adminService.removeStudentFromRoom(req.params.id, req.user!.userId, req.user!.role);
   sendSuccess(res, student, 'Student removed from room successfully');
 });
 
@@ -357,6 +361,11 @@ export const getRegistrationForms = asyncHandler(async (req: Request, res: Respo
     search: req.query.search as string,
   });
   sendPaginated(res, result.data, result.pagination, 'Registration forms retrieved');
+});
+
+export const getRegistrationFormById = asyncHandler(async (req: Request, res: Response) => {
+  const form = await adminService.getRegistrationFormById(req.params.id);
+  sendSuccess(res, form, 'Registration form retrieved');
 });
 
 export const updateRegistrationForm = asyncHandler(async (req: Request, res: Response) => {

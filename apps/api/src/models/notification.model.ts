@@ -38,7 +38,7 @@ const notificationSchema = new Schema<INotificationDocument>(
     referenceId: { type: Schema.Types.ObjectId },
     referenceModel: {
       type: String,
-      enum: ['LeaveRequest', 'GuardLog', 'User'],
+      enum: ['LeaveRequest', 'GuardLog', 'GatePass', 'AcademicHoliday', 'User'],
     },
   },
   {

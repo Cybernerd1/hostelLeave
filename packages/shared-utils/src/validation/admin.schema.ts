@@ -170,13 +170,24 @@ const academicHolidayBaseSchema = z.object({
   endDate: holidayDate,
   description: z.string().max(1000).optional(),
   type: z.nativeEnum(HolidayType).optional(),
+  // Scope: institution-wide (default) or hostel-specific.
+  scope: z.enum(['institution', 'hostel']).optional(),
+  // Required when scope === 'hostel'; must be a valid Mongo id.
+  hostelId: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid hostel id').optional(),
+  // Academic year label, e.g. "2026-2027" (optional, free-form).
+  academicYear: z.string().max(20).trim().optional(),
   confirmOverlap: z.boolean().optional(),
 });
 
-export const createAcademicHolidaySchema = academicHolidayBaseSchema.refine((data) => data.endDate >= data.startDate, {
-  message: 'End date cannot be earlier than start date',
-  path: ['endDate'],
-});
+export const createAcademicHolidaySchema = academicHolidayBaseSchema
+  .refine((data) => data.endDate >= data.startDate, {
+    message: 'End date cannot be earlier than start date',
+    path: ['endDate'],
+  })
+  .refine((data) => data.scope !== 'hostel' || !!data.hostelId, {
+    message: 'A hostel must be selected for a hostel-specific calendar entry',
+    path: ['hostelId'],
+  });
 
 export const updateAcademicHolidaySchema = academicHolidayBaseSchema.partial().refine(
   (data) => !data.startDate || !data.endDate || data.endDate >= data.startDate,
@@ -229,6 +240,7 @@ export const applicationFilterSchema = z.object({
   departmentId: z.string().optional(),
   courseId: z.string().optional(),
   hostelId: z.string().optional(),
+  registrationFormId: z.string().optional(),
 });
 
 // ─── Parent ─────────────────────────────────────────────────────────────────
@@ -356,6 +368,19 @@ export const markGateSchema = z.object({
   location: z.string().max(100).optional(),
 });
 
+// ─── Gate Pass ──────────────────────────────────────────────────────────────
+
+export const gatePassQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  status: z.string().optional(),
+  hostelId: z.string().optional(),
+  studentId: z.string().optional(),
+  search: z.string().trim().optional(),
+  fromDate: z.string().optional(),
+  toDate: z.string().optional(),
+});
+
 // ─── Type exports ───────────────────────────────────────────────────────────
 
 export type PaginationSchemaType = z.infer<typeof paginationSchema>;
@@ -384,3 +409,4 @@ export type UpdateRoomSchemaType = z.infer<typeof updateRoomSchema>;
 export type CreateStaffSchemaType = z.infer<typeof createStaffSchema>;
 export type VerifyQRSchemaType = z.infer<typeof verifyQRSchema>;
 export type MarkGateSchemaType = z.infer<typeof markGateSchema>;
+export type GatePassQuerySchemaType = z.infer<typeof gatePassQuerySchema>;

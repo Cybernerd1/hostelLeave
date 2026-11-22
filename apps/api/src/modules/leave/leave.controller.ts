@@ -51,8 +51,9 @@ export const cancelLeave = asyncHandler(async (req: Request, res: Response) => {
 /** GET /api/v1/leaves/:id - Get leave details */
 export const getLeaveById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
+  const { userId, role } = req.user!;
 
-  const leaveRequest = await leaveService.getLeaveById(id);
+  const leaveRequest = await leaveService.getLeaveById(id, { userId, role });
 
   if (!leaveRequest) {
     sendError(res, 'Leave request not found', 404, 'NOT_FOUND');
@@ -144,7 +145,7 @@ export const getPendingLeaves = asyncHandler(async (req: Request, res: Response)
   sendPaginated(res, result.data, result.pagination, 'Pending leaves retrieved');
 });
 
-/** GET /api/v1/leaves - Get all leaves (Admin/VC) */
+/** GET /api/v1/leaves - Get all leaves (Admin/VC), scoped by role */
 export const getAllLeaves = asyncHandler(async (req: Request, res: Response) => {
   const result = await leaveService.getAllLeaves({
     page: Number(req.query.page || 1),
@@ -158,7 +159,7 @@ export const getAllLeaves = asyncHandler(async (req: Request, res: Response) => 
     departmentId: req.query.departmentId as string,
     sortBy: req.query.sortBy as string,
     sortOrder: req.query.sortOrder as string,
-  });
+  }, req.user ? { userId: req.user.userId, role: req.user.role } : undefined);
 
   sendPaginated(res, result.data, result.pagination, 'Leaves retrieved');
 });
@@ -177,26 +178,22 @@ export const getLeaveStats = asyncHandler(
         filter = {};
         break;
 
-      case UserRole.WARDEN:
-      case UserRole.CHIEF_WARDEN: {
-        const hostel = await Hostel.findOne(
-          role === UserRole.WARDEN
-            ? { wardenId: userId }
-            : { chiefWardenId: userId },
-        );
-
-        if (!hostel) {
-          filter = { studentId: { $in: [] } };
-          break;
-        }
-
-        const studentIds = await Student.find({
-          hostelId: hostel._id,
-        }).distinct('_id');
+      case UserRole.WARDEN: {
+        // A warden may manage multiple hostels: include every assigned hostel.
+        const hostels = await Hostel.find({ wardenId: userId }).select('_id').lean();
+        const hostelIds = hostels.map((hostel) => hostel._id);
+        const studentIds = hostelIds.length
+          ? await Student.find({ hostelId: { $in: hostelIds } }).distinct('_id')
+          : [];
 
         filter = { studentId: { $in: studentIds } };
         break;
       }
+
+      case UserRole.CHIEF_WARDEN:
+        // The chief warden oversees the whole institution.
+        filter = {};
+        break;
 
       case UserRole.HOD: {
         const department = await Department.findOne({
@@ -238,6 +235,11 @@ export const getLeaveStats = asyncHandler(
 /** GET /api/v1/leaves/:id/pdf - Download approved leave pass as PDF */
 export const downloadLeavePDF = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
+  const { userId, role } = req.user!;
+
+  // Authorize before generating: students/parents may only download their own
+  // approved pass, wardens only for their hostels, staff institution-wide.
+  await leaveService.assertCanViewLeave(id, { userId, role });
 
   const pdfDoc = await pdfService.generateLeavePDF(id);
 

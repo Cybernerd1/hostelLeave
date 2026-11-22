@@ -13,11 +13,20 @@ const VIEW_ROLES = [
   UserRole.WARDEN,
   UserRole.CHIEF_WARDEN,
   UserRole.ADMIN,
+  UserRole.GUARD,
 ] as const;
-const MANAGE_ROLES = [UserRole.ADMIN, UserRole.CHIEF_WARDEN] as const;
+// Wardens may create hostel-specific entries; scope is enforced in the service.
+const MANAGE_ROLES = [UserRole.ADMIN, UserRole.CHIEF_WARDEN, UserRole.WARDEN] as const;
 
 router.use(authenticate);
+
+// View endpoints
 router.get('/', authorize(...VIEW_ROLES), controller.listAcademicHolidays);
+router.get('/calendar', authorize(...VIEW_ROLES), controller.getCalendarView);
+router.get('/summary', authorize(...VIEW_ROLES), controller.getCalendarSummary);
+router.get('/classify', authorize(...VIEW_ROLES), controller.classifyAcademicCalendar);
+
+// Management endpoints
 router.post(
   '/',
   authorize(...MANAGE_ROLES),

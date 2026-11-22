@@ -16,6 +16,8 @@ export function StudentsListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
+  const isChiefWarden = user?.role === 'chief_warden';
+  const canManageParent = isAdmin || isChiefWarden;
   const { error: showError, success } = useFeedback();
 
   const [students, setStudents] = useState<StudentRecord[]>([]);
@@ -134,14 +136,14 @@ export function StudentsListPage() {
                     </td>
                     <td>
                       <div className="action-buttons">
-                        {isAdmin && (
-                          <button className="btn-action btn-action--view" onClick={() => navigate(`/admin/students/${s._id}`)}>
-                            View
+                        <button className="btn-action btn-action--view" onClick={() => navigate(`/admin/students/${s._id}`)}>
+                          View
+                        </button>
+                        {canManageParent && (
+                          <button className="btn-action btn-action--approve" onClick={() => openAssign(s._id, s.name)}>
+                            Assign Parent
                           </button>
                         )}
-                        <button className="btn-action btn-action--approve" onClick={() => openAssign(s._id, s.name)}>
-                          Assign Parent
-                        </button>
                       </div>
                     </td>
                   </tr>
