@@ -12,6 +12,8 @@ import { useFeedback } from '@/components/ui/FeedbackProvider';
 import { leaveApi, type LeaveRequest } from '@/services/leave.service';
 import { type LeaveClassification } from '@/services/academicHoliday.service';
 import { gatePassApi, type GatePass } from '@/services/gatePass.service';
+import { StudentProfileDrawer } from '@/components/StudentProfileDrawer/StudentProfileDrawer';
+import { LeaveDurationSummary } from '@/components/LeaveDurationSummary/LeaveDurationSummary';
 import './LeaveDetailPage.css';
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -147,6 +149,7 @@ export function LeaveDetailPage() {
   const [classifyLoading, setClassifyLoading] = useState(false);
   const [classifyError, setClassifyError] = useState('');
   const [gatePass, setGatePass] = useState<GatePass | null>(null);
+  const [showStudentProfile, setShowStudentProfile] = useState(false);
 
   // Approval action state
   const [actionLoading, setActionLoading] = useState(false);
@@ -556,7 +559,13 @@ export function LeaveDetailPage() {
           <div className="leave-detail__grid-2">
             <div className="leave-detail__field">
               <span className="leave-detail__field-label">Name</span>
-              <span className="leave-detail__field-value">{leave.studentId?.name || '—'}</span>
+              <button
+                className="leave-detail__student-name-btn"
+                onClick={() => setShowStudentProfile(true)}
+                title="View student profile"
+              >
+                {leave.studentId?.name || '—'}
+              </button>
             </div>
             <div className="leave-detail__field">
               <span className="leave-detail__field-label">Roll Number</span>
@@ -621,6 +630,11 @@ export function LeaveDetailPage() {
           </div>
           <div className="leave-detail__applied-on">
             Applied on {formatDateTime(leave.createdAt)}
+          </div>
+
+          {/* ── Leave Duration Breakdown ────────────────────── */}
+          <div style={{ marginTop: 'var(--space-5)' }}>
+            <LeaveDurationSummary fromDate={leave.fromDate} toDate={leave.toDate} />
           </div>
         </div>
 
@@ -788,6 +802,13 @@ export function LeaveDetailPage() {
           </div>
         )}
       </div>
+
+      {/* ── Student Profile Drawer ────────────────────────────── */}
+      <StudentProfileDrawer
+        studentId={leave?.studentId?._id || ''}
+        isOpen={showStudentProfile}
+        onClose={() => setShowStudentProfile(false)}
+      />
     </div>
   );
 }

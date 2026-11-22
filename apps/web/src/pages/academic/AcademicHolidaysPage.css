@@ -115,6 +115,110 @@
 .academic-holidays__state--error {
   color: var(--color-error-700);
 }
+
+/* ─── Calendar Grid ────────────────────────────────────────────── */
+.academic-holidays__calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+}
+
+.academic-holidays__calendar-controls {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.academic-holidays__calendar-today {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.academic-holidays__calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.academic-holidays__calendar-weekday {
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--space-3) 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.academic-holidays__calendar-day {
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  border: 1px solid var(--border-primary);
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  position: relative;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.academic-holidays__calendar-day:hover {
+  background: var(--surface-tertiary);
+  cursor: pointer;
+}
+
+.academic-holidays__calendar-day--blank {
+  background: transparent;
+  border: none;
+  visibility: hidden;
+}
+
+.academic-holidays__calendar-day--holiday {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+  font-weight: var(--font-weight-semibold);
+}
+
+.academic-holidays__calendar-day--holiday:hover {
+  background: #fecaca;
+}
+
+.academic-holidays__calendar-day-number {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
+  margin-bottom: var(--space-1);
+}
+
+.academic-holidays__calendar-event {
+  font-size: var(--font-size-xs);
+  color: inherit;
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+}
+
+/* ─── Responsive Calendar ──────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .academic-holidays__calendar-day {
+    min-height: 50px;
+    font-size: var(--font-size-xs);
+  }
+
+  .academic-holidays__calendar-day-number {
+    font-size: var(--font-size-sm);
+  }
+}
+
 @media (max-width: 700px) {
   .academic-holidays {
     padding: var(--space-5) var(--space-4);
@@ -129,5 +233,21 @@
   .academic-holidays__table th,
   .academic-holidays__table td {
     padding: var(--space-3);
+  }
+  .academic-holidays__calendar-header {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: flex-start;
+  }
+  .academic-holidays__calendar-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .academic-holidays__calendar-day {
+    min-height: 45px;
+    font-size: var(--font-size-xs);
+  }
+  .academic-holidays__calendar-day-number {
+    font-size: var(--font-size-sm);
   }
 }

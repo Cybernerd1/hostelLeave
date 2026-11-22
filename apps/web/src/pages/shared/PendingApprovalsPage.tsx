@@ -9,6 +9,7 @@ import { leaveApi, type LeaveRequest } from '@/services/leave.service';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
+import { StudentProfileDrawer } from '@/components/StudentProfileDrawer/StudentProfileDrawer';
 import { getRoleConfig } from '@/utils/roleConfig';
 import './ApprovalsPage.css';
 
@@ -37,6 +38,7 @@ export function PendingApprovalsPage() {
   const [modal, setModal] = useState<{ leaveId: string; action: 'approve' | 'reject' } | null>(null);
   const [remarks, setRemarks] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [showStudentProfile, setShowStudentProfile] = useState<string | null>(null);
   const processingRef = useRef(false);
 
   const fetchPending = useCallback(async () => {
@@ -125,7 +127,13 @@ export function PendingApprovalsPage() {
                 {leaves.map((leave) => (
                   <tr key={leave._id}>
                     <td>
-                      <div className="cell-primary">{leave.studentId?.name ?? '—'}</div>
+                      <button
+                        className="approvals-page__student-name-btn"
+                        onClick={() => setShowStudentProfile(leave.studentId?._id || null)}
+                        title="View student profile"
+                      >
+                        <div className="cell-primary">{leave.studentId?.name ?? '—'}</div>
+                      </button>
                       <div className="cell-secondary">{leave.studentId?.rollNumber}</div>
                     </td>
                     <td><span className="leave-type-badge">{leave.leaveType}</span></td>
@@ -192,6 +200,13 @@ export function PendingApprovalsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Student Profile Drawer ────────────────────────────── */}
+      <StudentProfileDrawer
+        studentId={showStudentProfile || ''}
+        isOpen={!!showStudentProfile}
+        onClose={() => setShowStudentProfile(null)}
+      />
     </div>
   );
 }

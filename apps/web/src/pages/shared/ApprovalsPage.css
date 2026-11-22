@@ -12,6 +12,31 @@
 }
 .approvals-page__subtitle { color: var(--text-tertiary); margin: 0; font-size: 0.9375rem; }
 
+/* Student Name Button */
+.approvals-page__student-name-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-primary-600);
+  text-decoration: underline;
+  transition: color 0.2s ease;
+  font-size: inherit;
+  font-weight: inherit;
+  text-align: left;
+}
+
+.approvals-page__student-name-btn:hover {
+  color: var(--color-primary-700);
+  text-decoration: underline wavy;
+}
+
+.approvals-page__student-name-btn:focus {
+  outline: 2px solid var(--color-primary-600);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 /* Filters */
 .filters-row {
   display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap;

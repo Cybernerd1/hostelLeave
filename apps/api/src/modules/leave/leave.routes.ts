@@ -104,6 +104,13 @@ router.get(
   leaveController.getAllLeaves,
 );
 
+// ─── Student leave history (for profile view) ────────────────────
+router.get(
+  '/history/student/:studentId',
+  authorize(...APPROVAL_ROLES),
+  leaveController.getStudentLeaveHistory,
+);
+
 // ─── Leave details and PDF ────────────────────────────────────────
 router.get('/:id/pdf', leaveController.downloadLeavePDF);
 router.get('/:id', leaveController.getLeaveById);

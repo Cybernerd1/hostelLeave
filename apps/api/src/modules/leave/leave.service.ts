@@ -288,7 +288,7 @@ export class LeaveService {
     // The compound unique index (leaveRequestId, role) is the final guard
     // against two concurrent decisions by the same role.
     let approvalId: mongoose.Types.ObjectId;
-    const stageBypassed = isSuperApprover && currentStatus !== STATUS_TO_STAGE_ROLE[currentStatus];
+    const stageBypassed = isSuperApprover && currentStatus !== LeaveStatus.PENDING_CHIEF_WARDEN;
     try {
       const approval = await LeaveApproval.create({
         leaveRequestId: leaveRequest._id,
@@ -297,7 +297,7 @@ export class LeaveService {
         action,
         remarks,
         actionDate: new Date(),
-        stageBypassed: isSuperApprover && currentStatus !== LeaveStatus.PENDING_CHIEF_WARDEN,
+        stageBypassed: stageBypassed,
         bypassedFromStatus: stageBypassed ? currentStatus : undefined,
       });
       approvalId = approval._id as mongoose.Types.ObjectId;
@@ -885,6 +885,78 @@ export class LeaveService {
       completed: 0,
       cancelled: 0,
       expired: 0,
+    };
+  }
+
+  /**
+   * Get a student's leave history with pagination and filtering (for profile view).
+   * Returns all historical leaves submitted by the student.
+   * Access control: Warden/Chief Warden/Admin can view their scoped students; Parents can view their child's leaves.
+   */
+  async getStudentLeaveHistory(
+    studentId: string,
+    actorRole: UserRole,
+    query: { page: number; limit: number; status?: string; actorUserId?: string; actorRole?: UserRole },
+    actorUserId?: string,
+  ) {
+    // Authorize: Check if actor has permission to view this student's leaves
+    if (actorRole === UserRole.PARENT) {
+      // Parent can only view their own child's leaves
+      const student = await Student.findById(studentId).populate('parentId', 'userId').lean();
+      if (!student || !student.parentId || student.parentId.userId !== actorUserId) {
+        return {
+          data: [],
+          pagination: { page: query.page, limit: query.limit, total: 0, pages: 0 },
+        };
+      }
+    } else if (actorRole === UserRole.WARDEN) {
+      // Warden can only view students in their hostel
+      const hostels = await Hostel.find({ wardenId: actorUserId }).select('_id').lean();
+      const hostelIds = hostels.map((h) => h._id);
+      const student = await Student.findById(studentId).select('hostelId').lean();
+      if (!student || !hostelIds.some((hid) => hid.equals(student.hostelId))) {
+        return {
+          data: [],
+          pagination: { page: query.page, limit: query.limit, total: 0, pages: 0 },
+        };
+      }
+    }
+    // Admin and Chief Warden can view any student's leaves
+
+    const filter: any = { studentId };
+    if (query.status) {
+      filter.status = query.status;
+    }
+
+    const skip = (query.page - 1) * query.limit;
+    const total = await LeaveRequest.countDocuments(filter);
+    const data = await LeaveRequest.find(filter)
+      .populate({
+        path: 'studentId',
+        select: 'name rollNumber departmentId courseId hostelId',
+        populate: [
+          { path: 'departmentId', select: 'name' },
+          { path: 'courseId', select: 'name' },
+          { path: 'hostelId', select: 'name' },
+        ],
+      })
+      .populate({
+        path: 'approvals',
+        populate: { path: 'approverId', select: 'name role' },
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(query.limit)
+      .lean();
+
+    return {
+      data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        pages: Math.ceil(total / query.limit),
+      },
     };
   }
 }

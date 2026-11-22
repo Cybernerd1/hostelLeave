@@ -1,0 +1,397 @@
+.student-profile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fade-in 0.2s ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.student-profile-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 450px;
+  background: var(--surface-primary);
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  animation: slide-in 0.3s ease;
+  overflow-y: auto;
+}
+
+.student-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-6) var(--space-6);
+  border-bottom: 1px solid var(--border-primary);
+  position: sticky;
+  top: 0;
+  background: var(--surface-primary);
+  z-index: 10;
+}
+
+.student-profile-header h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.student-profile-close {
+  background: none;
+  border: none;
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.student-profile-close:hover {
+  color: var(--text-primary);
+}
+
+.student-profile-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.student-profile-loading,
+.student-profile-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.student-profile-error {
+  color: var(--color-error-700);
+}
+
+/* ─── Section ─────────────────────────────────────────────────── */
+.student-profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.student-profile-section h3 {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+/* ─── Student Information ──────────────────────────────────────── */
+.student-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.student-profile-row {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.student-profile-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.student-profile-value {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  overflow-wrap: break-word;
+}
+
+/* ─── Statistics ──────────────────────────────────────────────── */
+.student-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.student-profile-stat {
+  background: var(--surface-secondary);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.student-profile-stat-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.student-profile-stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+/* ─── Leave History ───────────────────────────────────────────── */
+.student-profile-history-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  width: 100%;
+}
+
+.student-profile-filters {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.student-profile-filter {
+  font-size: var(--font-size-xs);
+  padding: 5px 10px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.student-profile-filter:hover {
+  background: var(--surface-tertiary);
+  color: var(--text-primary);
+}
+
+.student-profile-filter.active {
+  background: var(--color-primary-600);
+  color: white;
+  border-color: var(--color-primary-600);
+}
+
+.student-profile-empty {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  padding: var(--space-6) var(--space-3);
+}
+
+.student-profile-leave-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.student-profile-leave-item {
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.student-profile-leave-item:hover {
+  background: var(--surface-secondary);
+  border-color: var(--border-secondary);
+}
+
+.student-profile-leave-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3);
+  gap: var(--space-3);
+}
+
+.student-profile-leave-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.student-profile-leave-type {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.student-profile-leave-dates {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.student-profile-leave-status {
+  display: inline-block;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: white;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  text-transform: capitalize;
+  flex-shrink: 0;
+}
+
+.student-profile-leave-details {
+  padding: 0 var(--space-3) var(--space-3);
+  background: var(--surface-secondary);
+  border-top: 1px solid var(--border-primary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.student-profile-leave-detail {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: var(--space-3);
+  font-size: var(--font-size-xs);
+}
+
+.student-profile-leave-detail span:first-child {
+  color: var(--text-tertiary);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.student-profile-leave-detail span:last-child {
+  color: var(--text-primary);
+  overflow-wrap: break-word;
+}
+
+/* ─── Pagination ───────────────────────────────────────────────── */
+.student-profile-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border-primary);
+  margin-top: var(--space-4);
+}
+
+.student-profile-pagination button {
+  font-size: var(--font-size-sm);
+  padding: 6px 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.student-profile-pagination button:hover:not(:disabled) {
+  background: var(--surface-tertiary);
+  color: var(--text-primary);
+}
+
+.student-profile-pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.student-profile-pagination span {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ─── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .student-profile-drawer {
+    max-width: 100%;
+  }
+
+  .student-profile-row {
+    grid-template-columns: 80px 1fr;
+  }
+
+  .student-profile-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .student-profile-leave-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .student-profile-leave-status {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .student-profile-drawer {
+    max-width: 100%;
+  }
+
+  .student-profile-header {
+    padding: var(--space-4);
+  }
+
+  .student-profile-content {
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+
+  .student-profile-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+
+  .student-profile-label {
+    font-size: var(--font-size-xs);
+  }
+
+  .student-profile-leave-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .student-profile-filters {
+    width: 100%;
+  }
+
+  .student-profile-filter {
+    flex: 1;
+    min-width: 60px;
+    text-align: center;
+  }
+}

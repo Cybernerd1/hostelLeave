@@ -164,6 +164,28 @@ export const getAllLeaves = asyncHandler(async (req: Request, res: Response) => 
   sendPaginated(res, result.data, result.pagination, 'Leaves retrieved');
 });
 
+/** GET /api/v1/leaves/history/student/:studentId - Get a specific student's leave history (for profile view) */
+export const getStudentLeaveHistory = asyncHandler(async (req: Request, res: Response) => {
+  const { studentId } = req.params;
+  const { userId, role } = req.user!;
+  const { page = 1, limit = 10, status } = req.query;
+
+  // Authorize: Only reviewers (Warden, Chief Warden, Admin) and Parents can access student leave history
+  if (![UserRole.WARDEN, UserRole.CHIEF_WARDEN, UserRole.ADMIN, UserRole.PARENT].includes(role)) {
+    return sendError(res, 'You do not have permission to view student leave history', 403, 'FORBIDDEN');
+  }
+
+  const result = await leaveService.getStudentLeaveHistory(studentId, role, {
+    page: Number(page),
+    limit: Number(limit),
+    status: status as string,
+    actorUserId: userId,
+    actorRole: role,
+  });
+
+  sendPaginated(res, result.data, result.pagination, 'Student leave history retrieved');
+});
+
 /** GET /api/v1/leaves/stats - Get role-scoped leave statistics */
 export const getLeaveStats = asyncHandler(
   async (req: Request, res: Response) => {

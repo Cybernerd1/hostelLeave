@@ -271,33 +271,42 @@ export function AcademicHolidaysPage() {
 
       {/* ── Monthly calendar view ─────────────────────────────────── */}
       <Card variant="default" padding="lg">
-        <div className="academic-holidays__list-header">
+        <div className="academic-holidays__calendar-header">
           <h2 className="academic-holidays__section-title">{monthLabel}</h2>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="academic-holidays__calendar-controls">
             <button className="btn btn--secondary btn--sm" onClick={() => changeMonth(-1)}>‹ Prev</button>
             <button className="btn btn--secondary btn--sm" onClick={() => changeMonth(1)}>Next ›</button>
+            <button 
+              className="btn btn--secondary btn--sm" 
+              onClick={() => {
+                const now = new Date();
+                setViewMonth({ year: now.getUTCFullYear(), month: now.getUTCMonth() });
+              }}
+            >
+              Today
+            </button>
           </div>
         </div>
         <div className="academic-holidays__calendar-grid">
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
-            <span key={d} className="academic-holidays__calendar-weekday">{d}</span>
+            <div key={d} className="academic-holidays__calendar-weekday">{d}</div>
           ))}
           {monthCells.map((cell, idx) =>
             cell ? (
-              <span
+              <div
                 key={cell.key}
                 className={`academic-holidays__calendar-day ${holidayByDay.has(cell.key) ? 'academic-holidays__calendar-day--holiday' : ''}`}
                 title={holidayByDay.get(cell.key)?.name}
               >
-                {cell.day}
+                <div className="academic-holidays__calendar-day-number">{cell.day}</div>
                 {holidayByDay.has(cell.key) && (
-                  <small className="academic-holidays__calendar-event">
-                    {TYPE_LABELS[holidayByDay.get(cell.key)?.type || 'other'] || 'Holiday'}
-                  </small>
+                  <div className="academic-holidays__calendar-event">
+                    {holidayByDay.get(cell.key)?.name}
+                  </div>
                 )}
-              </span>
+              </div>
             ) : (
-              <span key={`blank-${idx}`} className="academic-holidays__calendar-day academic-holidays__calendar-day--blank" />
+              <div key={`blank-${idx}`} className="academic-holidays__calendar-day academic-holidays__calendar-day--blank" />
             ),
           )}
         </div>
